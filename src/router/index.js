@@ -1,8 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
-import BookView from '@/components/book/BookView.vue'
-import MovieView from '@/components/movie/MovieView.vue'
-import MusicView from '@/components/music/MusicView.vue'
+import { HomeView, BookView, MovieView, MusicView } from '@/views'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
