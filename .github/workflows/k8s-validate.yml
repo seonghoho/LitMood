@@ -1,0 +1,18 @@
+name: K8s 매니페스트 검증
+
+on:
+  pull_request:
+    paths: ['infra/k8s/**']
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        overlay: [dev, prod]
+    steps:
+      - uses: actions/checkout@v4
+      - name: kustomize build
+        run: kubectl kustomize infra/k8s/overlays/${{ matrix.overlay }} > /tmp/manifest.yaml
+      - name: 매니페스트 출력
+        run: cat /tmp/manifest.yaml

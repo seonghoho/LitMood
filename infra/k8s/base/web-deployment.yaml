@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: litmood-web
+  labels: { app: litmood-web }
+spec:
+  selector:
+    matchLabels: { app: litmood-web }
+  template:
+    metadata:
+      labels: { app: litmood-web }
+    spec:
+      terminationGracePeriodSeconds: 20
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: web
+          image: litmood-web:latest
+          ports:
+            - { name: http, containerPort: 3000 }
+          env:
+            # 클러스터 내부에서는 Service DNS 로 백엔드를 호출한다 (RSC 데이터 페칭)
+            - { name: API_INTERNAL_BASE_URL, value: 'http://litmood-api' }
+          envFrom:
+            - configMapRef: { name: litmood-web-config }
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 512Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ['ALL'] }

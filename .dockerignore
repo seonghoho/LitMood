@@ -1,0 +1,16 @@
+node_modules
+**/node_modules
+.git
+.github
+.turbo
+**/.next
+**/dist
+**/build
+**/.gradle
+**/styled-system
+docs
+infra/k8s
+*.log
+.env
+.env.*
+!.env.example

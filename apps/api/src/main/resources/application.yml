@@ -1,0 +1,133 @@
+spring:
+  application:
+    name: litmood-api
+
+  # ADR-003 — 검색 1건이 외부 API 3개를 동시 호출하는 I/O 바운드 구조.
+  # 가상 스레드로 리액티브 전환 없이 높은 동시성을 확보한다.
+  threads:
+    virtual:
+      enabled: true
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/litmood}
+    username: ${DB_USERNAME:litmood}
+    password: ${DB_PASSWORD:litmood_local}
+    hikari:
+      maximum-pool-size: 20
+      connection-timeout: 3000
+      pool-name: litmood-cp
+
+  jpa:
+    open-in-view: false # 뷰 렌더링 중 커넥션 점유 방지. 트랜잭션 경계는 application 레이어가 갖는다.
+    hibernate:
+      ddl-auto: validate # 스키마의 진실 원천은 Flyway. JPA 는 검증만 한다.
+    properties:
+      hibernate:
+        jdbc.time_zone: UTC
+        default_batch_fetch_size: 100 # N+1 완화
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2s
+
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+
+server:
+  port: 8080
+  shutdown: graceful # K8s 롤링 업데이트 중 처리 중 요청 보존 (docs/06-infra.md)
+  error:
+    include-message: never # 스택트레이스·내부 메시지 노출 금지. 에러는 ProblemDetail 로만 응답한다.
+
+# RFC 9457 Problem Details 활성화 (docs/03-architecture.md)
+spring.mvc.problemdetails.enabled: true
+
+litmood:
+  jwt:
+    secret: ${JWT_SECRET:}
+    access-ttl-seconds: ${JWT_ACCESS_TTL:900}
+    refresh-ttl-seconds: ${JWT_REFRESH_TTL:1209600}
+  cache:
+    search-ttl-hours: 6 # F-02-04
+  provider:
+    timeout-ms: 3000 # NFR-02 — 개별 provider 타임아웃
+    naver:
+      client-id: ${NAVER_CLIENT_ID:}
+      client-secret: ${NAVER_CLIENT_SECRET:}
+      base-url: https://openapi.naver.com
+    tmdb:
+      api-key: ${TMDB_API_KEY:}
+      base-url: https://api.themoviedb.org/3
+    spotify:
+      client-id: ${SPOTIFY_CLIENT_ID:}
+      client-secret: ${SPOTIFY_CLIENT_SECRET:}
+      base-url: https://api.spotify.com/v1
+  storage:
+    endpoint: ${S3_ENDPOINT:http://localhost:9000}
+    bucket: ${S3_BUCKET:litmood}
+    access-key: ${S3_ACCESS_KEY:}
+    secret-key: ${S3_SECRET_KEY:}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+
+# NFR-07 — 관측성
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true # /actuator/health/{liveness,readiness} 분리 (docs/06-infra.md)
+      show-details: when-authorized
+  metrics:
+    tags:
+      application: litmood-api
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    version: openapi_3_1
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: alpha
+
+logging:
+  level:
+    com.litmood: INFO
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+
+logging:
+  level:
+    com.litmood: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
+
+springdoc:
+  swagger-ui:
+    enabled: true
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+springdoc:
+  swagger-ui:
+    enabled: false # 운영에서는 스펙 UI 비공개. openapi.json 은 CI 산출물로만 사용한다.

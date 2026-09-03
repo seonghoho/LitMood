@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: litmood-api
+  labels: { app: litmood-api }
+spec:
+  selector:
+    matchLabels: { app: litmood-api }
+  template:
+    metadata:
+      labels: { app: litmood-api }
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: '8080'
+    spec:
+      # server.shutdown=graceful 과 짝을 이뤄 롤링 업데이트 중 처리 중 요청을 보존한다
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: api
+          image: litmood-api:latest # overlay 에서 git SHA 태그로 치환된다
+          ports:
+            - { name: http, containerPort: 8080 }
+          env:
+            - { name: SPRING_PROFILES_ACTIVE, value: prod }
+          envFrom:
+            - secretRef: { name: litmood-api-secrets }
+            - configMapRef: { name: litmood-api-config }
+          # readiness 와 liveness 를 분리한다 — DB 커넥션 실패 시
+          # 트래픽만 차단되고 파드가 무한 재시작되지 않는다 (docs/06-infra.md)
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            failureThreshold: 3
+          startupProbe:
+            httpGet: { path: /actuator/health/liveness, port: http }
+            failureThreshold: 30
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 250m, memory: 512Mi }
+            limits: { memory: 1Gi } # CPU limit 은 두지 않는다 — 스로틀링으로 지연이 튄다
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ['ALL'] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: tmp
+          emptyDir: {}

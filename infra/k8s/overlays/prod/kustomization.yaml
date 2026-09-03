@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: litmood
+namePrefix: prod-
+
+resources:
+  - ../../base
+  - pdb.yaml
+
+# HPA 가 관리하므로 replicas 는 초기값 역할만 한다
+replicas:
+  - { name: litmood-api, count: 3 }
+  - { name: litmood-web, count: 2 }
+
+images:
+  # CI 가 git SHA 로 치환한다: kustomize edit set image litmood-api=<repo>:<sha>
+  - { name: litmood-api, newTag: latest }
+  - { name: litmood-web, newTag: latest }

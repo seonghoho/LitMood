@@ -1,0 +1,30 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: litmood-dev
+namePrefix: dev-
+
+resources:
+  - ../../base
+
+# dev 는 비용 최소화 — 단일 replica, HPA 비활성
+replicas:
+  - { name: litmood-api, count: 1 }
+  - { name: litmood-web, count: 1 }
+
+patches:
+  - target: { kind: HorizontalPodAutoscaler, name: litmood-api }
+    patch: |
+      $patch: delete
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: litmood-api
+  - target: { kind: Deployment, name: litmood-api }
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 384Mi
+      - op: replace
+        path: /spec/template/spec/containers/0/env/0/value
+        value: dev

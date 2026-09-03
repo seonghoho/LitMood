@@ -1,0 +1,5 @@
+{
+  "extends": "@litmood/config/tsconfig",
+  "compilerOptions": { "jsx": "react-jsx" },
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
+}
