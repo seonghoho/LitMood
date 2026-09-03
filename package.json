@@ -22,7 +22,7 @@
     "stub": "node tools/stub-provider/server.mjs",
     "api:dev:stub": "./scripts/dev-api.sh --stub",
     "doctor": "./scripts/doctor.sh",
-    "verify": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm build && pnpm api:test"
+    "verify": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm build && pnpm test && pnpm api:test"
   },
   "devDependencies": {
     "prettier": "^3.4.2",
