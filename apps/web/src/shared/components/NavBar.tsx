@@ -65,6 +65,13 @@ export function NavBar() {
             >
               {user.nickname}
             </Link>
+            <Link
+              href="/settings"
+              aria-current={pathname === '/settings' ? 'page' : undefined}
+              className={css({ textStyle: 'caption', color: 'fg.muted' })}
+            >
+              설정
+            </Link>
             <button
               type="button"
               onClick={() => void logout()}
