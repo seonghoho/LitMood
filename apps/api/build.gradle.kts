@@ -70,6 +70,9 @@ dependencyManagement {
 }
 
 tasks.withType<Test> {
+    // docker-java 기본값은 Docker Engine 29 가 제거한 구버전 API 라 /info 가 400 을 반환한다.
+    // Engine 25 이상이 지원하는 최소 버전으로 고정해 Testcontainers 가 데몬을 찾게 한다.
+    systemProperty("api.version", "1.44")
     useJUnitPlatform()
     testLogging {
         events("passed", "skipped", "failed")
