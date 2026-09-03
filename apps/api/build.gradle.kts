@@ -40,6 +40,9 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")
 
+    // ── 오브젝트 스토리지 — 아바타 presigned 업로드 (F-01-04) ──
+    implementation("software.amazon.awssdk:s3:2.29.45")
+
     // ── API 문서 → OpenAPI 3.1 SSOT (ADR-008) ──────────────
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0")
 

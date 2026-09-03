@@ -73,6 +73,11 @@ public class User extends BaseTimeEntity {
         }
     }
 
+    /** 아바타 교체. URL 이 우리 스토리지의 것인지는 호출부가 검증한다. */
+    public void updateAvatar(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
+    }
+
     public boolean hasPassword() {
         return passwordHash != null;
     }

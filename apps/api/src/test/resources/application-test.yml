@@ -5,6 +5,14 @@ spring:
   flyway:
     enabled: true
 
+# presigned URL 서명에는 실제 MinIO 가 필요 없다 — 오프라인 연산이므로 테스트용 고정 키를 쓴다
+litmood:
+  storage:
+    endpoint: http://localhost:9000
+    bucket: litmood
+    access-key: test-access-key
+    secret-key: test-secret-key
+
 logging:
   level:
     org.testcontainers: WARN
