@@ -1,17 +1,33 @@
 import { ApiError, type ProblemDetail } from '@litmood/api-client'
+import { useAuthStore } from '@/shared/store/auth'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080'
 
-/**
- * 클라이언트 컴포넌트에서 백엔드를 호출한다.
- * 에러는 Problem Details 이므로 `code` 로 분기할 수 있는 ApiError 로 변환한다.
- */
-export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${BASE_URL}${path}`, {
-    ...init,
-    headers: { Accept: 'application/json', ...init?.headers },
-    credentials: 'include',
-  })
+async function request<T>(
+  path: string,
+  init?: RequestInit,
+  retryOnUnauthorized = true,
+): Promise<T> {
+  const token = useAuthStore.getState().accessToken
+
+  const headers = new Headers(init?.headers)
+  headers.set('Accept', 'application/json')
+  if (init?.body && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json')
+  }
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
+
+  const response = await fetch(`${BASE_URL}${path}`, { ...init, headers, credentials: 'include' })
+
+  if (response.status === 401 && retryOnUnauthorized && token) {
+    // Access 토큰이 만료됐을 뿐일 수 있다. refresh 쿠키로 한 번만 재발급을 시도한다.
+    const refreshed = await tryRefresh()
+    if (refreshed) {
+      return request<T>(path, init, false)
+    }
+  }
 
   if (!response.ok) {
     const problem = (await response.json().catch(() => null)) as ProblemDetail | null
@@ -25,5 +41,43 @@ export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
     )
   }
 
-  return (await response.json()) as T
+  return response.status === 204 ? (undefined as T) : ((await response.json()) as T)
 }
+
+/** refresh 쿠키로 액세스 토큰 재발급. 실패하면 로그아웃 상태로 전환한다. */
+export async function tryRefresh(): Promise<boolean> {
+  try {
+    const response = await fetch(`${BASE_URL}/api/v1/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+    })
+    if (!response.ok) {
+      useAuthStore.getState().signOut()
+      return false
+    }
+    const data = (await response.json()) as { accessToken: string; user: CurrentUserPayload }
+    useAuthStore.getState().signIn(data.accessToken, data.user)
+    return true
+  } catch {
+    useAuthStore.getState().signOut()
+    return false
+  }
+}
+
+interface CurrentUserPayload {
+  id: number
+  handle: string
+  nickname: string
+  avatarUrl: string | null
+}
+
+export const apiGet = <T>(path: string, init?: RequestInit) =>
+  request<T>(path, { ...init, method: 'GET' })
+
+export const apiPost = <T>(path: string, body?: unknown) =>
+  request<T>(path, { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) })
+
+export const apiPatch = <T>(path: string, body: unknown) =>
+  request<T>(path, { method: 'PATCH', body: JSON.stringify(body) })
+
+export const apiDelete = (path: string) => request<void>(path, { method: 'DELETE' })

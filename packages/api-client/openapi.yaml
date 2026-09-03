@@ -9,8 +9,12 @@ servers:
 security:
   - bearerAuth: []
 tags:
+  - name: Records
+    description: 기록
   - name: Auth
     description: 인증
+  - name: Moods
+    description: 무드
   - name: System
     description: 시스템 상태
   - name: Users
@@ -18,6 +22,26 @@ tags:
   - name: Contents
     description: 콘텐츠 검색·조회
 paths:
+  /api/v1/records:
+    post:
+      tags:
+        - Records
+      summary: 기록 생성
+      description: 콘텐츠가 자체 DB 에 없으면 provider 에서 가져와 스냅샷을 만든다. 필수 입력은 status 뿐이다.
+      operationId: create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRecordRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/RecordResponse'
   /api/v1/auth/signup:
     post:
       tags:
@@ -95,6 +119,68 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
       security: []
+  /api/v1/records/{id}:
+    get:
+      tags:
+        - Records
+      summary: 기록 단건 조회
+      description: 공개 범위를 벗어나면 404 로 응답한다
+      operationId: get
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/RecordResponse'
+    delete:
+      tags:
+        - Records
+      summary: 기록 삭제
+      description: soft delete
+      operationId: delete
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+    patch:
+      tags:
+        - Records
+      summary: 기록 수정
+      operationId: update
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRecordRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/RecordResponse'
   /api/v1/users/me:
     get:
       tags:
@@ -108,6 +194,142 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/UserSummary'
+  /api/v1/users/@{handle}:
+    get:
+      tags:
+        - Users
+      summary: 공개 프로필 조회
+      operationId: profile
+      parameters:
+        - name: handle
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/PublicProfile'
+      security: []
+  /api/v1/users/@{handle}/records:
+    get:
+      tags:
+        - Users
+      summary: 공개 기록 목록
+      description: PUBLIC 기록만 노출한다
+      operationId: publicRecords
+      parameters:
+        - name: handle
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: types
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - BOOK
+                - MOVIE
+                - MUSIC
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/RecordPage'
+      security: []
+  /api/v1/records/me:
+    get:
+      tags:
+        - Records
+      summary: 내 타임라인
+      description: 커서 기반 페이지네이션
+      operationId: myTimeline
+      parameters:
+        - name: types
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - BOOK
+                - MOVIE
+                - MUSIC
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - WANT
+                - DOING
+                - DONE
+                - DROPPED
+        - name: moods
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: minRating
+          in: query
+          required: false
+          schema:
+            type: number
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/RecordPage'
   /api/v1/ping:
     get:
       tags:
@@ -123,6 +345,31 @@ paths:
               schema:
                 type: object
                 additionalProperties: {}
+      security: []
+  /api/v1/moods:
+    get:
+      tags:
+        - Moods
+      summary: 무드 목록
+      description: '큐레이션 무드 우선, 그다음 사용량순'
+      operationId: list
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 30
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MoodTag'
       security: []
   /api/v1/contents/search:
     get:
@@ -166,6 +413,156 @@ paths:
       security: []
 components:
   schemas:
+    CreateRecordRequest:
+      type: object
+      properties:
+        provider:
+          type: string
+          enum:
+            - NAVER_BOOK
+            - TMDB
+            - SPOTIFY
+        externalId:
+          type: string
+        status:
+          type: string
+          enum:
+            - WANT
+            - DOING
+            - DONE
+            - DROPPED
+        rating:
+          type: number
+          maximum: 5.0
+          minimum: 0.5
+        moods:
+          type: array
+          items:
+            type: string
+            maxLength: 30
+            minLength: 0
+          maxItems: 5
+          minItems: 0
+        review:
+          type: string
+          maxLength: 2000
+          minLength: 0
+        isSpoiler:
+          type: boolean
+        visibility:
+          type: string
+          enum:
+            - PUBLIC
+            - FOLLOWERS
+            - PRIVATE
+        contextNote:
+          type: string
+          maxLength: 200
+          minLength: 0
+        startedAt:
+          type: string
+          format: date
+        finishedAt:
+          type: string
+          format: date
+        repeatCount:
+          type: integer
+          format: int32
+      required:
+        - externalId
+        - provider
+        - status
+    ContentRef:
+      type: object
+      description: 기록에 붙는 콘텐츠 요약
+      properties:
+        id:
+          type: integer
+          format: int64
+        type:
+          type: string
+          enum:
+            - BOOK
+            - MOVIE
+            - MUSIC
+        provider:
+          type: string
+          enum:
+            - NAVER_BOOK
+            - TMDB
+            - SPOTIFY
+        externalId:
+          type: string
+        title:
+          type: string
+        creators:
+          type: array
+          items:
+            type: string
+        releasedOn:
+          type: string
+          format: date
+        coverUrl:
+          type: string
+    MoodTag:
+      type: object
+      properties:
+        name:
+          type: string
+        displayName:
+          type: string
+        color:
+          type: string
+        curated:
+          type: boolean
+    RecordResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum:
+            - WANT
+            - DOING
+            - DONE
+            - DROPPED
+        rating:
+          type: number
+        moods:
+          type: array
+          items:
+            $ref: '#/components/schemas/MoodTag'
+        review:
+          type: string
+        isSpoiler:
+          type: boolean
+        visibility:
+          type: string
+          enum:
+            - PUBLIC
+            - FOLLOWERS
+            - PRIVATE
+        contextNote:
+          type: string
+        startedAt:
+          type: string
+          format: date
+        finishedAt:
+          type: string
+          format: date
+        repeatCount:
+          type: integer
+          format: int32
+        content:
+          $ref: '#/components/schemas/ContentRef'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
     SignupRequest:
       type: object
       properties:
@@ -219,6 +616,77 @@ components:
       required:
         - email
         - password
+    UpdateRecordRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - WANT
+            - DOING
+            - DONE
+            - DROPPED
+        rating:
+          type: number
+          maximum: 5.0
+          minimum: 0.5
+        moods:
+          type: array
+          items:
+            type: string
+            maxLength: 30
+            minLength: 0
+          maxItems: 5
+          minItems: 0
+        review:
+          type: string
+          maxLength: 2000
+          minLength: 0
+        isSpoiler:
+          type: boolean
+        visibility:
+          type: string
+          enum:
+            - PUBLIC
+            - FOLLOWERS
+            - PRIVATE
+        contextNote:
+          type: string
+          maxLength: 200
+          minLength: 0
+        startedAt:
+          type: string
+          format: date
+        finishedAt:
+          type: string
+          format: date
+        repeatCount:
+          type: integer
+          format: int32
+    PublicProfile:
+      type: object
+      properties:
+        handle:
+          type: string
+        nickname:
+          type: string
+        bio:
+          type: string
+        avatarUrl:
+          type: string
+    RecordPage:
+      type: object
+      description: 커서 기반 페이지. nextCursor 가 null 이면 마지막 페이지다.
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecordResponse'
+        nextCursor:
+          type: string
+        totalCount:
+          type: integer
+          format: int64
     ContentSummary:
       type: object
       description: 정규화된 콘텐츠. provider 차이는 서버가 흡수한다.

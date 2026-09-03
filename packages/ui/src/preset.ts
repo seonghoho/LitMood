@@ -95,6 +95,14 @@ export const litmoodPreset = definePreset({
   name: 'litmood',
   theme: {
     extend: {
+      // 모바일 우선. md 는 태블릿/데스크톱 경계로, 다이얼로그가
+      // 하단 시트에서 가운데 모달로 바뀌는 지점이다.
+      breakpoints: {
+        sm: '480px',
+        md: '768px',
+        lg: '1024px',
+        xl: '1280px',
+      },
       tokens,
       semanticTokens,
       textStyles: {

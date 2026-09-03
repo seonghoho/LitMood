@@ -58,6 +58,10 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/users/@*/**", "/api/v1/collections/*")
                         .permitAll()
+                        // 기록 단건은 공개 공유 대상이다. 숫자 id 로 한정해야
+                        // "/api/v1/records/me" 까지 열리는 사고를 막는다.
+                        .requestMatchers(HttpMethod.GET, "/api/v1/records/{id:[0-9]+}")
+                        .permitAll()
                         .anyRequest()
                         .authenticated());
 

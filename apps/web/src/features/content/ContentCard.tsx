@@ -9,7 +9,14 @@ const TYPE_TOKEN = {
   MUSIC: 'colors.content.music',
 } as const
 
-export function ContentCard({ content }: { content: ContentSummary }) {
+export function ContentCard({
+  content,
+  action,
+}: {
+  content: ContentSummary
+  /** 우측 액션 슬롯 — 검색 결과에서는 "기록" 버튼이 들어간다 */
+  action?: React.ReactNode
+}) {
   const accent = token(TYPE_TOKEN[content.type])
 
   return (
@@ -99,6 +106,8 @@ export function ContentCard({ content }: { content: ContentSummary }) {
           </p>
         )}
       </div>
+
+      {action && <div className={css({ flexShrink: 0, alignSelf: 'center' })}>{action}</div>}
     </article>
   )
 }

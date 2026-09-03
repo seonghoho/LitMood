@@ -4,12 +4,15 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { css } from 'styled-system/css'
 import { flex, stack } from 'styled-system/patterns'
 import { ApiError } from '@litmood/api-client'
+import { RecordDialog } from '@/features/record/RecordDialog'
 import { apiGet } from '@/shared/lib/api'
+import { useAuthStore } from '@/shared/store/auth'
 import { ContentCard } from './ContentCard'
 import {
   CONTENT_TYPE_LABEL,
   CONTENT_TYPES,
   PROVIDER_CONTENT_LABEL,
+  type ContentSummary,
   type ContentType,
   type SearchResponse,
 } from './types'
@@ -27,6 +30,11 @@ export function SearchView() {
   const [data, setData] = useState<SearchResponse | null>(null)
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  // 화면 전환 없이 기록을 마치기 위한 다이얼로그 상태 (F-03-01)
+  const [recording, setRecording] = useState<ContentSummary | null>(null)
+  const [recorded, setRecorded] = useState<Set<string>>(new Set())
+
+  const signedIn = useAuthStore((state) => state.user !== null)
 
   // 입력 중 매 글자마다 호출하면 외부 API rate limit 을 태운다
   const debounced = useDebounced(query, 400)
@@ -171,9 +179,108 @@ export function SearchView() {
             {CONTENT_TYPE_LABEL[activeType]} 결과가 없습니다.
           </p>
         )}
-        {items.map((content) => (
-          <ContentCard key={`${content.provider}:${content.externalId}`} content={content} />
+        {items.map((content) => {
+          const key = `${content.provider}:${content.externalId}`
+          const done = recorded.has(content.externalId)
+          return (
+            <ContentCard
+              key={key}
+              content={content}
+              action={
+                <button
+                  type="button"
+                  disabled={done}
+                  onClick={() => setRecording(content)}
+                  className={css({
+                    textStyle: 'caption',
+                    px: '3',
+                    py: '2',
+                    rounded: 'md',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    bg: done ? 'bg.subtle' : 'brand.default',
+                    color: done ? 'fg.muted' : 'fg.onAccent',
+                    _disabled: { cursor: 'default' },
+                  })}
+                >
+                  {done ? '기록됨' : signedIn ? '기록' : '로그인 후 기록'}
+                </button>
+              }
+            />
+          )
+        })}
+      </div>
+
+      {recording &&
+        (signedIn ? (
+          <RecordDialog
+            content={recording}
+            onClose={() => setRecording(null)}
+            onCreated={(externalId) => setRecorded((prev) => new Set(prev).add(externalId))}
+          />
+        ) : (
+          <SignInPrompt onClose={() => setRecording(null)} />
         ))}
+    </div>
+  )
+}
+
+/** 비로그인 사용자가 기록을 누른 경우 — 검색 결과를 잃지 않도록 돌아올 곳을 넘긴다. */
+function SignInPrompt({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose()
+      }}
+      className={flex({
+        position: 'fixed',
+        inset: '0',
+        bg: 'rgba(0,0,0,0.45)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: '50',
+        p: '4',
+      })}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        className={stack({ gap: '4', bg: 'bg.surface', p: '6', rounded: 'lg', maxW: '360px' })}
+      >
+        <p className={css({ textStyle: 'body', color: 'fg.default' })}>
+          기록하려면 로그인이 필요합니다.
+        </p>
+        <div className={flex({ gap: '2', justifyContent: 'flex-end' })}>
+          <button
+            type="button"
+            onClick={onClose}
+            className={css({
+              textStyle: 'body',
+              px: '4',
+              py: '2',
+              rounded: 'md',
+              cursor: 'pointer',
+              bg: 'bg.subtle',
+              color: 'fg.default',
+            })}
+          >
+            닫기
+          </button>
+          <a
+            href="/login?next=/search"
+            className={css({
+              textStyle: 'body',
+              fontWeight: '600',
+              px: '4',
+              py: '2',
+              rounded: 'md',
+              bg: 'brand.default',
+              color: 'fg.onAccent',
+            })}
+          >
+            로그인
+          </a>
+        </div>
       </div>
     </div>
   )
