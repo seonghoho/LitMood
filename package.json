@@ -17,8 +17,12 @@
     "infra:up": "docker compose -f infra/docker/compose.yml up -d",
     "infra:down": "docker compose -f infra/docker/compose.yml down",
     "infra:reset": "docker compose -f infra/docker/compose.yml down -v && pnpm infra:up",
-    "api:dev": "cd apps/api && ./gradlew bootRun --args='--spring.profiles.active=local'",
-    "api:test": "cd apps/api && ./gradlew test"
+    "api:dev": "./scripts/dev-api.sh",
+    "api:test": "cd apps/api && ./gradlew test",
+    "stub": "node tools/stub-provider/server.mjs",
+    "api:dev:stub": "./scripts/dev-api.sh --stub",
+    "doctor": "./scripts/doctor.sh",
+    "verify": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm build && pnpm api:test"
   },
   "devDependencies": {
     "prettier": "^3.4.2",

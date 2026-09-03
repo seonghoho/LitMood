@@ -31,25 +31,36 @@ LitMood는 **통합 타임라인**과 **무드**를 1급 개념으로 다룹니�
 - [제품 개요](docs/00-product-overview.md) · [기능 명세](docs/01-requirements.md) · [기술 선택](docs/02-tech-decisions.md)
 - [아키텍처](docs/03-architecture.md) · [도메인 모델](docs/04-domain-model.md) · [API 명세](docs/05-api-spec.md)
 - [인프라](docs/06-infra.md) · [로드맵](docs/07-roadmap.md)
+- [**인계 문서**](docs/08-handoff.md) · [M5 상세 명세](docs/09-milestone-5.md)
 
-## 개발 환경
+저장소 규약과 자주 걸리는 함정은 [CLAUDE.md](CLAUDE.md)에 있습니다.
+
+## 시작하기
+
+필요한 것: **Node 20+, pnpm 10+, Java 21, Docker**
 
 ```bash
-pnpm infra:up      # Postgres, Redis, MinIO (Docker)
 pnpm install
-pnpm api:dev       # Spring Boot  → http://localhost:8080
-pnpm dev           # Next.js      → http://localhost:3000
+pnpm infra:up      # Postgres, Redis, MinIO
+pnpm doctor        # 환경 점검 — 전부 ✅ 여야 합니다
 ```
 
-동작 확인:
+외부 API 키가 없어도 전체 스택이 돌아갑니다. 터미널 3개에서:
 
 ```bash
-curl http://localhost:8080/api/v1/ping
+pnpm stub          # 외부 provider 대역        → :9876
+pnpm api:dev:stub  # Spring Boot               → :8080
+pnpm dev           # Next.js                   → :3000
 ```
 
-`http://localhost:3000/health` 는 서버 컴포넌트가 백엔드를 직접 호출해 배선을 확인하는 페이지입니다.
+`http://localhost:3000` 에서 가입하고 "노르웨이"로 검색해 보세요.
 
-포트가 이미 사용 중이라면 `infra/docker/.env.example` 을 `.env` 로 복사해 조정하세요.
+실제 API 키가 있다면 `.env.example` 을 `apps/api/.env.local` 로 복사해 채운 뒤 `pnpm api:dev` 를 씁니다.
+포트가 충돌하면 `infra/docker/.env.example` 을 `.env` 로 복사해 조정하세요.
+
+```bash
+pnpm verify        # typecheck + lint + format + build + 백엔드 테스트
+```
 
 ## 구조
 
@@ -64,9 +75,20 @@ packages/
 infra/
   docker/     로컬 개발 인프라
   k8s/        base + overlays(dev, prod)
+tools/
+  stub-provider/  외부 API 대역 — 키 없이 개발할 때
+scripts/      dev-api.sh, doctor.sh
 docs/         제품·기술 명세
 ```
 
 ## 현재 상태
 
-[로드맵](docs/07-roadmap.md) 기준 **M0 완료**. 다음은 M1 (인증 + 콘텐츠 검색)입니다.
+[로드맵](docs/07-roadmap.md) 기준 **M0~M4 완료**, M5(운영 준비) 미착수.
+백엔드 테스트 74건 통과.
+
+동작하는 것: 가입 → 검색 → 기록 → 타임라인 → 공개 프로필 → 컬렉션 공유(동적 OG 이미지) →
+무드 탐색 → 팔로우 → 피드 → 좋아요.
+
+**이어서 작업한다면 [docs/08-handoff.md](docs/08-handoff.md) 를 먼저 읽으세요.**
+남은 작업은 [GitHub Issues](https://github.com/seonghoho/LitMood/issues) 9건과
+[M5 상세 명세](docs/09-milestone-5.md)에 정리돼 있습니다.

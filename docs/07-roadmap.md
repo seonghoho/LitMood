@@ -71,6 +71,8 @@
 
 ## M5. 운영 준비
 
+> 실행 가능한 상세 체크리스트: [09-milestone-5.md](09-milestone-5.md)
+
 - [ ] Dockerfile 최적화, K8s 매니페스트 (base + dev/prod overlay)
 - [ ] GitHub Actions CI/CD 전체 파이프라인
 - [ ] Playwright E2E (핵심 경로)
