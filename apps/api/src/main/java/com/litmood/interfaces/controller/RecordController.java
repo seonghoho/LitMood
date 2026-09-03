@@ -70,6 +70,22 @@ public class RecordController {
                 limit);
     }
 
+    @GetMapping("/feed")
+    @Operation(summary = "팔로잉 피드", description = "팔로우한 사용자들의 공개·팔로워 공개 기록. 차단한 사용자는 제외된다.")
+    public RecordPage feed(
+            @CurrentUser AuthPrincipal principal,
+            @RequestParam(required = false) List<ContentType> types,
+            @RequestParam(required = false) List<String> moods,
+            @RequestParam(required = false) String cursor,
+            @RequestParam(required = false) Integer limit) {
+
+        return recordService.feed(
+                principal.userId(),
+                new TimelineFilter(types, null, moods, null, null, null),
+                cursor,
+                limit);
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "기록 단건 조회", description = "공개 범위를 벗어나면 404 로 응답한다")
     public RecordResponse get(@CurrentUser AuthPrincipal principal, @PathVariable Long id) {

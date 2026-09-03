@@ -63,6 +63,9 @@ public class Collection extends BaseTimeEntity {
     @Column(name = "item_count", nullable = false)
     private int itemCount = 0;
 
+    @Column(name = "like_count", nullable = false)
+    private int likeCount = 0;
+
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
@@ -168,6 +171,16 @@ public class Collection extends BaseTimeEntity {
         }
     }
 
+    public void increaseLikeCount() {
+        this.likeCount++;
+    }
+
+    public void decreaseLikeCount() {
+        if (this.likeCount > 0) {
+            this.likeCount--;
+        }
+    }
+
     public void softDelete() {
         this.deletedAt = Instant.now();
     }
@@ -228,6 +241,10 @@ public class Collection extends BaseTimeEntity {
 
     public int getItemCount() {
         return itemCount;
+    }
+
+    public int getLikeCount() {
+        return likeCount;
     }
 
     public List<CollectionItem> getItems() {

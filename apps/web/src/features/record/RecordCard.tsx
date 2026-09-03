@@ -4,6 +4,7 @@ import { flex, stack } from 'styled-system/patterns'
 import { token } from 'styled-system/tokens'
 import { FALLBACK_MOOD_COLOR } from '@litmood/ui'
 import { CONTENT_TYPE_LABEL } from '@/features/content/types'
+import { LikeButton } from '@/features/social/LikeButton'
 import { STATUS_LABEL, type RecordResponse } from './types'
 
 const TYPE_TOKEN = {
@@ -12,7 +13,14 @@ const TYPE_TOKEN = {
   MUSIC: 'colors.content.music',
 } as const
 
-export function RecordCard({ record }: { record: RecordResponse }) {
+export function RecordCard({
+  record,
+  showAuthor,
+}: {
+  record: RecordResponse
+  /** 피드에서는 누가 남긴 기록인지 보여야 한다 */
+  showAuthor?: boolean
+}) {
   const { content } = record
 
   return (
@@ -115,6 +123,22 @@ export function RecordCard({ record }: { record: RecordResponse }) {
             {record.review}
           </p>
         )}
+
+        <div className={flex({ gap: '2', alignItems: 'center', mt: '1' })}>
+          <LikeButton
+            recordId={record.id}
+            initialCount={record.likeCount}
+            initialLiked={record.likedByMe}
+          />
+          {showAuthor && record.authorHandle && (
+            <Link
+              href={`/@${record.authorHandle}`}
+              className={css({ textStyle: 'caption', color: 'fg.muted' })}
+            >
+              @{record.authorHandle}
+            </Link>
+          )}
+        </div>
       </div>
     </article>
   )

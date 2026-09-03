@@ -33,6 +33,10 @@ export interface RecordResponse {
   startedAt: string | null
   finishedAt: string | null
   repeatCount: number
+  likeCount: number
+  likedByMe: boolean
+  authorHandle: string | null
+  authorNickname: string | null
   content: ContentRef
   createdAt: string
   updatedAt: string

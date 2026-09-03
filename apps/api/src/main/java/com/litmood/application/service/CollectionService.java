@@ -7,6 +7,7 @@ import com.litmood.domain.model.Content;
 import com.litmood.domain.model.User;
 import com.litmood.domain.model.Visibility;
 import com.litmood.domain.repository.CollectionRepository;
+import com.litmood.domain.repository.SocialRepository;
 import com.litmood.domain.repository.UserRepository;
 import com.litmood.interfaces.dto.CollectionDtos.AddCollectionItemRequest;
 import com.litmood.interfaces.dto.CollectionDtos.CollectionResponse;
@@ -27,14 +28,17 @@ public class CollectionService {
     private final CollectionRepository collectionRepository;
     private final UserRepository userRepository;
     private final ContentService contentService;
+    private final SocialRepository socialRepository;
 
     public CollectionService(
             CollectionRepository collectionRepository,
             UserRepository userRepository,
-            ContentService contentService) {
+            ContentService contentService,
+            SocialRepository socialRepository) {
         this.collectionRepository = collectionRepository;
         this.userRepository = userRepository;
         this.contentService = contentService;
+        this.socialRepository = socialRepository;
     }
 
     @Transactional
@@ -51,8 +55,10 @@ public class CollectionService {
                 .findActiveBySlugWithItems(slug)
                 .orElseThrow(() -> LitmoodException.notFound("컬렉션"));
 
-        // 팔로우는 M4 범위. 그전까지 FOLLOWERS 는 본인에게만 보인다.
-        if (!collection.isVisibleTo(viewerId, false)) {
+        boolean follows = socialRepository.isFollowing(viewerId, collection.getUserId());
+        boolean blocked = socialRepository.isBlockedBetween(viewerId, collection.getUserId());
+
+        if (!collection.isVisibleTo(viewerId, follows) || blocked) {
             // 존재 여부를 숨기기 위해 403 이 아닌 404 로 응답한다
             throw LitmoodException.notFound("컬렉션");
         }
@@ -65,8 +71,19 @@ public class CollectionService {
                 .findActiveByHandle(handle)
                 .orElseThrow(() -> LitmoodException.notFound("사용자"));
 
+        if (socialRepository.isBlockedBetween(viewerId, owner.getId())) {
+            throw LitmoodException.notFound("사용자");
+        }
+
         boolean self = viewerId != null && viewerId.equals(owner.getId());
-        List<Visibility> visibleTo = self ? List.of(Visibility.values()) : List.of(Visibility.PUBLIC);
+        List<Visibility> visibleTo;
+        if (self) {
+            visibleTo = List.of(Visibility.values());
+        } else if (socialRepository.isFollowing(viewerId, owner.getId())) {
+            visibleTo = List.of(Visibility.PUBLIC, Visibility.FOLLOWERS);
+        } else {
+            visibleTo = List.of(Visibility.PUBLIC);
+        }
 
         return collectionRepository.findByOwner(owner.getId(), visibleTo, MAX_LIST_SIZE).stream()
                 .map(CollectionSummary::from)

@@ -23,14 +23,14 @@ import org.springframework.stereotype.Repository;
 
 interface RecordJpaRepository extends JpaRepository<Record, Long> {
 
-    @EntityGraph(attributePaths = {"content", "moods"})
+    @EntityGraph(attributePaths = {"content", "moods", "author"})
     @Query("SELECT r FROM Record r WHERE r.id = :id AND r.deletedAt IS NULL")
     Optional<Record> findActiveById(@Param("id") Long id);
 
     @Query("SELECT r FROM Record r WHERE r.userId = :userId AND r.content.id = :contentId AND r.deletedAt IS NULL")
     Optional<Record> findActiveByUserAndContent(@Param("userId") Long userId, @Param("contentId") Long contentId);
 
-    @EntityGraph(attributePaths = {"content", "moods"})
+    @EntityGraph(attributePaths = {"content", "moods", "author"})
     @Query("SELECT r FROM Record r WHERE r.id IN :ids ORDER BY r.createdAt DESC, r.id DESC")
     List<Record> findAllWithDetails(@Param("ids") List<Long> ids);
 }
@@ -121,7 +121,19 @@ class RecordRepositoryImpl implements RecordRepository {
             CriteriaBuilder cb, CriteriaQuery<?> criteria, Root<Record> root, RecordQuery q) {
         List<Predicate> predicates = new ArrayList<>();
         predicates.add(cb.isNull(root.get("deletedAt")));
-        predicates.add(cb.equal(root.get("userId"), q.ownerId()));
+
+        // 피드는 팔로잉 여러 명을 한 번에 훑는다. 대상이 비면 결과도 비어야 하므로
+        // "항상 거짓" 조건을 넣는다 — IN () 은 SQL 문법 오류가 된다.
+        if (q.ownerIds() == null || q.ownerIds().isEmpty()) {
+            predicates.add(cb.disjunction());
+            return predicates;
+        }
+        predicates.add(root.get("userId").in(q.ownerIds()));
+
+        // 차단은 양방향으로 가린다 (F-06-05)
+        if (q.excludedUserIds() != null && !q.excludedUserIds().isEmpty()) {
+            predicates.add(cb.not(root.get("userId").in(q.excludedUserIds())));
+        }
 
         if (q.visibleTo() != null && !q.visibleTo().isEmpty()) {
             predicates.add(root.get("visibility").in(q.visibleTo()));

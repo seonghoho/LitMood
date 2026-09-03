@@ -41,6 +41,14 @@ public class Record extends BaseTimeEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
+    /**
+     * 피드에서 "누가 남긴 기록인가"를 보여주기 위한 읽기 전용 연관.
+     * 쓰기는 userId 로만 한다 — 컬럼이 둘로 갈리면 정합이 깨진다.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", insertable = false, updatable = false)
+    private User author;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "content_id", nullable = false)
     private Content content;
@@ -73,6 +81,14 @@ public class Record extends BaseTimeEntity {
 
     @Column(name = "repeat_count", nullable = false)
     private int repeatCount = 0;
+
+    /**
+     * 비정규화 카운터 (V3).
+     * 피드는 매 렌더마다 N개의 기록을 보여주므로, 항목마다 count(*) 를 돌면 N+1 이 된다.
+     * 좋아요 트랜잭션 안에서 함께 증감시켜 정합을 맞춘다.
+     */
+    @Column(name = "like_count", nullable = false)
+    private int likeCount = 0;
 
     @Column(name = "deleted_at")
     private Instant deletedAt;
@@ -146,6 +162,16 @@ public class Record extends BaseTimeEntity {
         }
     }
 
+    public void increaseLikeCount() {
+        this.likeCount++;
+    }
+
+    public void decreaseLikeCount() {
+        if (this.likeCount > 0) {
+            this.likeCount--;
+        }
+    }
+
     public void softDelete() {
         this.deletedAt = Instant.now();
         this.moods.forEach(Mood::decreaseUsage);
@@ -173,6 +199,10 @@ public class Record extends BaseTimeEntity {
 
     public Long getUserId() {
         return userId;
+    }
+
+    public User getAuthor() {
+        return author;
     }
 
     public Content getContent() {
@@ -213,6 +243,10 @@ public class Record extends BaseTimeEntity {
 
     public int getRepeatCount() {
         return repeatCount;
+    }
+
+    public int getLikeCount() {
+        return likeCount;
     }
 
     public Set<Mood> getMoods() {

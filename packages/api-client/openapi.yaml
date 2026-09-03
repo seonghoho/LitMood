@@ -11,6 +11,8 @@ security:
 tags:
   - name: Records
     description: 기록
+  - name: Discover
+    description: 탐색
   - name: Auth
     description: 인증
   - name: Moods
@@ -19,11 +21,89 @@ tags:
     description: 시스템 상태
   - name: Collections
     description: 컬렉션
+  - name: Social
+    description: 팔로우·좋아요·차단·신고
   - name: Users
     description: 사용자
   - name: Contents
     description: 콘텐츠 검색·조회
 paths:
+  /api/v1/users/@{handle}/follow:
+    post:
+      tags:
+        - Social
+      summary: 팔로우
+      description: 비대칭 관계 — 승인이 필요 없다. 이미 팔로우 중이면 멱등하게 성공한다.
+      operationId: follow
+      parameters:
+        - name: handle
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags:
+        - Social
+      summary: 언팔로우
+      operationId: unfollow
+      parameters:
+        - name: handle
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+  /api/v1/users/@{handle}/block:
+    post:
+      tags:
+        - Social
+      summary: 차단
+      description: 양방향으로 가려지며 기존 팔로우 관계는 양쪽 모두 해제된다
+      operationId: block
+      parameters:
+        - name: handle
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags:
+        - Social
+      summary: 차단 해제
+      operationId: unblock
+      parameters:
+        - name: handle
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+  /api/v1/reports:
+    post:
+      tags:
+        - Social
+      summary: 신고
+      description: 같은 대상을 반복 신고해도 한 번만 접수된다
+      operationId: report
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
   /api/v1/records:
     post:
       tags:
@@ -44,6 +124,45 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/RecordResponse'
+  /api/v1/records/{id}/like:
+    post:
+      tags:
+        - Social
+      summary: 기록 좋아요
+      operationId: likeRecord
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/LikeResponse'
+    delete:
+      tags:
+        - Social
+      summary: 기록 좋아요 취소
+      operationId: unlikeRecord
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/LikeResponse'
   /api/v1/collections:
     post:
       tags:
@@ -64,6 +183,43 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/CollectionResponse'
+  /api/v1/collections/{slug}/like:
+    post:
+      tags:
+        - Social
+      summary: 컬렉션 좋아요
+      operationId: likeCollection
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/LikeResponse'
+    delete:
+      tags:
+        - Social
+      summary: 컬렉션 좋아요 취소
+      operationId: unlikeCollection
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/LikeResponse'
   /api/v1/collections/{slug}/items:
     post:
       tags:
@@ -485,6 +641,50 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/RecordPage'
+  /api/v1/records/feed:
+    get:
+      tags:
+        - Records
+      summary: 팔로잉 피드
+      description: 팔로우한 사용자들의 공개·팔로워 공개 기록. 차단한 사용자는 제외된다.
+      operationId: feed
+      parameters:
+        - name: types
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - BOOK
+                - MOVIE
+                - MUSIC
+        - name: moods
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/RecordPage'
   /api/v1/ping:
     get:
       tags:
@@ -554,6 +754,37 @@ paths:
               schema:
                 $ref: '#/components/schemas/MoodDiscovery'
       security: []
+  /api/v1/discover/popular:
+    get:
+      tags:
+        - Discover
+      summary: 인기 콘텐츠
+      description: 기간 내 기록 수 기준. Redis Sorted Set 으로 집계한다.
+      operationId: popular
+      parameters:
+        - name: period
+          in: query
+          required: false
+          schema:
+            type: string
+            default: week
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 20
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ContentRef'
+      security: []
   /api/v1/contents/search:
     get:
       tags:
@@ -621,6 +852,35 @@ paths:
                 $ref: '#/components/schemas/CollectionResponse'
 components:
   schemas:
+    ReportRequest:
+      type: object
+      properties:
+        targetType:
+          type: string
+          enum:
+            - RECORD
+            - COLLECTION
+            - USER
+        targetId:
+          type: integer
+          format: int64
+        reason:
+          type: string
+          enum:
+            - SPAM
+            - ABUSE
+            - SEXUAL
+            - SPOILER
+            - COPYRIGHT
+            - OTHER
+        detail:
+          type: string
+          maxLength: 500
+          minLength: 0
+      required:
+        - reason
+        - targetId
+        - targetType
     CreateRecordRequest:
       type: object
       properties:
@@ -763,6 +1023,15 @@ components:
         repeatCount:
           type: integer
           format: int32
+        likeCount:
+          type: integer
+          format: int32
+        likedByMe:
+          type: boolean
+        authorHandle:
+          type: string
+        authorNickname:
+          type: string
         content:
           $ref: '#/components/schemas/ContentRef'
         createdAt:
@@ -771,6 +1040,14 @@ components:
         updatedAt:
           type: string
           format: date-time
+    LikeResponse:
+      type: object
+      properties:
+        likeCount:
+          type: integer
+          format: int32
+        likedByMe:
+          type: boolean
     CreateCollectionRequest:
       type: object
       properties:
@@ -993,6 +1270,14 @@ components:
           type: string
         avatarUrl:
           type: string
+        followers:
+          type: integer
+          format: int64
+        following:
+          type: integer
+          format: int64
+        followedByMe:
+          type: boolean
     RecordPage:
       type: object
       description: 커서 기반 페이지. nextCursor 가 null 이면 마지막 페이지다.

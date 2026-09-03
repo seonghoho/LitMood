@@ -97,11 +97,19 @@ public final class RecordDtos {
             LocalDate startedAt,
             LocalDate finishedAt,
             int repeatCount,
+            int likeCount,
+            boolean likedByMe,
+            String authorHandle,
+            String authorNickname,
             ContentRef content,
             Instant createdAt,
             Instant updatedAt) {
 
-        public static RecordResponse from(Record record) {
+        /**
+         * @param likedTargetIds 조회자가 좋아요를 누른 기록 id 집합.
+         *     항목마다 개별 조회하면 N+1 이 되므로 목록 단위로 한 번에 판정해 넘긴다.
+         */
+        public static RecordResponse from(Record record, java.util.Set<Long> likedTargetIds) {
             return new RecordResponse(
                     record.getId(),
                     record.getStatus(),
@@ -114,6 +122,10 @@ public final class RecordDtos {
                     record.getStartedAt(),
                     record.getFinishedAt(),
                     record.getRepeatCount(),
+                    record.getLikeCount(),
+                    likedTargetIds.contains(record.getId()),
+                    record.getAuthor() == null ? null : record.getAuthor().getHandle(),
+                    record.getAuthor() == null ? null : record.getAuthor().getNickname(),
                     ContentRef.from(record.getContent()),
                     record.getCreatedAt(),
                     record.getUpdatedAt());

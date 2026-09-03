@@ -44,6 +44,9 @@ export function NavBar() {
         <NavLink href="/search" active={pathname === '/search'}>
           검색
         </NavLink>
+        <NavLink href="/feed" active={pathname === '/feed'}>
+          피드
+        </NavLink>
         <NavLink href="/timeline" active={pathname === '/timeline'}>
           내 기록
         </NavLink>

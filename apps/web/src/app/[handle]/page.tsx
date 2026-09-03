@@ -4,8 +4,9 @@ import { notFound } from 'next/navigation'
 import { css } from 'styled-system/css'
 import { stack } from 'styled-system/patterns'
 import type { CollectionSummary } from '@/features/collection/types'
-import { RecordCard } from '@/features/record/RecordCard'
 import type { RecordPage } from '@/features/record/types'
+import { FollowButton } from '@/features/social/FollowButton'
+import { ProfileRecords } from '@/features/social/ProfileRecords'
 import { decodeRouteParam } from '@/shared/lib/route-params'
 
 /**
@@ -25,6 +26,9 @@ interface PublicProfile {
   nickname: string
   bio: string | null
   avatarUrl: string | null
+  followers: number
+  following: number
+  followedByMe: boolean
 }
 
 /** 라우트가 /@handle 형태이므로 URL 의 '@' 를 벗겨 API 로 넘긴다. */
@@ -111,12 +115,19 @@ export default async function ProfilePage({ params }: { params: Promise<{ handle
         }}
       />
 
-      <header className={stack({ gap: '1' })}>
+      <header className={stack({ gap: '2' })}>
         <h1 className={css({ textStyle: 'display', color: 'fg.default' })}>{profile.nickname}</h1>
         <p className={css({ textStyle: 'caption', color: 'fg.muted' })}>@{profile.handle}</p>
         {profile.bio && (
-          <p className={css({ textStyle: 'body', color: 'fg.default', pt: '2' })}>{profile.bio}</p>
+          <p className={css({ textStyle: 'body', color: 'fg.default', pt: '1' })}>{profile.bio}</p>
         )}
+        <p className={css({ textStyle: 'caption', color: 'fg.muted' })}>
+          팔로워 <strong className={css({ color: 'fg.default' })}>{profile.followers}</strong>
+          {' · '}
+          팔로잉 <strong className={css({ color: 'fg.default' })}>{profile.following}</strong>
+        </p>
+        {/* 팔로우 상태는 조회자마다 다르다. 캐시된 페이지가 아닌 클라이언트가 판단한다. */}
+        <FollowButton handle={profile.handle} />
       </header>
 
       {collections.length > 0 && (
@@ -154,17 +165,16 @@ export default async function ProfilePage({ params }: { params: Promise<{ handle
       )}
 
       <section className={stack({ gap: '3' })}>
-        <h2 className={css({ textStyle: 'title' })}>
-          기록 <span className={css({ color: 'fg.muted' })}>{records.totalCount}</span>
-        </h2>
-
-        {records.items.length === 0 ? (
-          <p className={css({ textStyle: 'body', color: 'fg.muted' })}>
-            아직 공개된 기록이 없습니다.
-          </p>
-        ) : (
-          records.items.map((record) => <RecordCard key={record.id} record={record} />)
-        )}
+        {/*
+          docs/03-architecture.md 의 화면 유형별 페칭 규칙:
+          공개 목록은 RSC 로 먼저 그려 SEO·초기 렌더를 확보하고,
+          로그인한 팔로워에게만 보이는 FOLLOWERS 기록은 클라이언트가 덧붙인다.
+        */}
+        <ProfileRecords
+          handle={profile.handle}
+          initialRecords={records.items}
+          initialTotal={records.totalCount}
+        />
       </section>
     </main>
   )

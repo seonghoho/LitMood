@@ -2,6 +2,7 @@ package com.litmood.interfaces.controller;
 
 import com.litmood.application.service.CollectionService;
 import com.litmood.application.service.RecordService;
+import com.litmood.application.service.SocialService;
 import com.litmood.application.service.RecordService.TimelineFilter;
 import com.litmood.domain.exception.ErrorCode;
 import com.litmood.domain.exception.LitmoodException;
@@ -32,14 +33,17 @@ public class UserController {
     private final UserRepository userRepository;
     private final RecordService recordService;
     private final CollectionService collectionService;
+    private final SocialService socialService;
 
     public UserController(
             UserRepository userRepository,
             RecordService recordService,
-            CollectionService collectionService) {
+            CollectionService collectionService,
+            SocialService socialService) {
         this.userRepository = userRepository;
         this.recordService = recordService;
         this.collectionService = collectionService;
+        this.socialService = socialService;
     }
 
     @GetMapping("/me")
@@ -58,23 +62,31 @@ public class UserController {
     @GetMapping("/@{handle}")
     @SecurityRequirements
     @Operation(summary = "공개 프로필 조회")
-    public PublicProfile profile(@PathVariable String handle) {
+    public PublicProfile profile(@CurrentUser AuthPrincipal principal, @PathVariable String handle) {
         User user = userRepository
                 .findActiveByHandle(handle)
                 .orElseThrow(() -> LitmoodException.notFound("사용자"));
-        return PublicProfile.from(user);
+
+        Long viewerId = principal == null ? null : principal.userId();
+        SocialService.FollowStats stats = socialService.stats(viewerId, user);
+        return PublicProfile.from(user, stats);
     }
 
     @GetMapping("/@{handle}/records")
     @SecurityRequirements
     @Operation(summary = "공개 기록 목록", description = "PUBLIC 기록만 노출한다")
     public RecordPage publicRecords(
+            @CurrentUser AuthPrincipal principal,
             @PathVariable String handle,
             @RequestParam(required = false) List<ContentType> types,
             @RequestParam(required = false) String cursor,
             @RequestParam(required = false) Integer limit) {
         return recordService.publicTimeline(
-                handle, new TimelineFilter(types, null, null, null, null, null), cursor, limit);
+                handle,
+                principal == null ? null : principal.userId(),
+                new TimelineFilter(types, null, null, null, null, null),
+                cursor,
+                limit);
     }
 
     @GetMapping("/@{handle}/collections")
@@ -86,10 +98,24 @@ public class UserController {
     }
 
     @Schema(name = "PublicProfile")
-    public record PublicProfile(String handle, String nickname, String bio, String avatarUrl) {
-        static PublicProfile from(User user) {
+    public record PublicProfile(
+            String handle,
+            String nickname,
+            String bio,
+            String avatarUrl,
+            long followers,
+            long following,
+            boolean followedByMe) {
+
+        static PublicProfile from(User user, SocialService.FollowStats stats) {
             return new PublicProfile(
-                    user.getHandle(), user.getNickname(), user.getBio(), user.getAvatarUrl());
+                    user.getHandle(),
+                    user.getNickname(),
+                    user.getBio(),
+                    user.getAvatarUrl(),
+                    stats.followers(),
+                    stats.following(),
+                    stats.followedByMe());
         }
     }
 }
