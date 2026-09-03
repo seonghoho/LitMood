@@ -1,9 +1,12 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { css } from 'styled-system/css'
 import { stack } from 'styled-system/patterns'
+import type { CollectionSummary } from '@/features/collection/types'
 import { RecordCard } from '@/features/record/RecordCard'
 import type { RecordPage } from '@/features/record/types'
+import { decodeRouteParam } from '@/shared/lib/route-params'
 
 /**
  * 공개 프로필 (NFR-06).
@@ -26,7 +29,7 @@ interface PublicProfile {
 
 /** 라우트가 /@handle 형태이므로 URL 의 '@' 를 벗겨 API 로 넘긴다. */
 function parseHandle(param: string): string | null {
-  const decoded = decodeURIComponent(param)
+  const decoded = decodeRouteParam(param)
   return decoded.startsWith('@') ? decoded.slice(1) : null
 }
 
@@ -45,6 +48,14 @@ async function fetchRecords(handle: string): Promise<RecordPage> {
   return response.ok
     ? ((await response.json()) as RecordPage)
     : { items: [], nextCursor: null, totalCount: 0 }
+}
+
+async function fetchCollections(handle: string): Promise<CollectionSummary[]> {
+  const response = await fetch(
+    `${API_BASE}/api/v1/users/@${encodeURIComponent(handle)}/collections`,
+    { next: { revalidate: REVALIDATE_SECONDS, tags: [`profile:${handle}:collections`] } },
+  )
+  return response.ok ? ((await response.json()) as CollectionSummary[]) : []
 }
 
 export async function generateMetadata({
@@ -78,7 +89,8 @@ export default async function ProfilePage({ params }: { params: Promise<{ handle
   const profile = await fetchProfile(handle)
   if (!profile) notFound()
 
-  const records = await fetchRecords(handle)
+  // 두 호출은 서로 의존하지 않으므로 병렬로 보낸다
+  const [records, collections] = await Promise.all([fetchRecords(handle), fetchCollections(handle)])
 
   return (
     <main className={stack({ gap: '6', maxW: '2xl', mx: 'auto', px: '6', py: '12' })}>
@@ -106,6 +118,40 @@ export default async function ProfilePage({ params }: { params: Promise<{ handle
           <p className={css({ textStyle: 'body', color: 'fg.default', pt: '2' })}>{profile.bio}</p>
         )}
       </header>
+
+      {collections.length > 0 && (
+        <section className={stack({ gap: '3' })}>
+          <h2 className={css({ textStyle: 'title' })}>
+            컬렉션 <span className={css({ color: 'fg.muted' })}>{collections.length}</span>
+          </h2>
+          <div className={stack({ gap: '2' })}>
+            {collections.map((collection) => (
+              <Link
+                key={collection.slug}
+                href={`/collections/${collection.slug}`}
+                className={css({
+                  display: 'block',
+                  p: '4',
+                  rounded: 'md',
+                  bg: 'bg.surface',
+                  borderWidth: '1px',
+                  borderStyle: 'solid',
+                  borderColor: 'border.default',
+                })}
+              >
+                <span
+                  className={css({ textStyle: 'body', fontWeight: '600', color: 'fg.default' })}
+                >
+                  {collection.title}
+                </span>
+                <span className={css({ textStyle: 'caption', color: 'fg.muted', ml: '2' })}>
+                  {collection.itemCount}개
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className={stack({ gap: '3' })}>
         <h2 className={css({ textStyle: 'title' })}>

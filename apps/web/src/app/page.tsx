@@ -29,8 +29,9 @@ export default function HomePage() {
         <h2 className={css({ textStyle: 'title' })}>무드</h2>
         <div className={flex({ gap: '2', flexWrap: 'wrap' })}>
           {Object.entries(CURATED_MOOD_TOKENS).map(([label, moodToken]) => (
-            <span
+            <Link
               key={moodToken}
+              href={`/moods/${encodeURIComponent(label)}`}
               style={{ backgroundColor: token(`colors.mood.${moodToken}` as 'colors.mood.dawn') }}
               className={css({
                 textStyle: 'caption',
@@ -41,7 +42,7 @@ export default function HomePage() {
               })}
             >
               {label}
-            </span>
+            </Link>
           ))}
         </div>
       </section>

@@ -38,7 +38,14 @@ spring:
       timeout: 2s
 
   jackson:
-    default-property-inclusion: non_null
+    # null 필드를 생략하지 않는다.
+    #
+    # non_null 로 두면 rating 이 없을 때 키 자체가 사라지는데,
+    # OpenAPI 스펙(ADR-008)은 그 필드를 "존재하며 nullable" 로 선언한다.
+    # 스펙에서 생성된 클라이언트는 `rating: number | null` 을 기대하므로
+    # 실제로는 undefined 가 와서 널 검사를 통과해 버린다.
+    # 계약과 실제 페이로드를 일치시키는 쪽이 옳다.
+    default-property-inclusion: always
     serialization:
       write-dates-as-timestamps: false
 

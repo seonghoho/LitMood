@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { css } from 'styled-system/css'
 import { flex, stack } from 'styled-system/patterns'
 import { token } from 'styled-system/tokens'
@@ -66,7 +67,8 @@ export function RecordCard({ record }: { record: RecordResponse }) {
           <span className={css({ textStyle: 'caption', color: 'fg.muted' })}>
             {STATUS_LABEL[record.status]}
           </span>
-          {record.rating !== null && (
+          {/* != null 은 null 과 undefined 를 함께 거른다 — 서버가 필드를 생략해도 안전하다 */}
+          {record.rating != null && (
             <span
               className={css({ textStyle: 'caption', color: 'brand.default', fontWeight: '600' })}
             >
@@ -87,9 +89,11 @@ export function RecordCard({ record }: { record: RecordResponse }) {
 
         {record.moods.length > 0 && (
           <div className={flex({ gap: '1.5', flexWrap: 'wrap' })}>
+            {/* 무드는 탐색의 축이다 (F-07-01) — 칩에서 바로 같은 기분의 목록으로 간다 */}
             {record.moods.map((mood) => (
-              <span
+              <Link
                 key={mood.name}
+                href={`/moods/${encodeURIComponent(mood.displayName)}`}
                 style={{ backgroundColor: mood.color ?? FALLBACK_MOOD_COLOR }}
                 className={css({
                   textStyle: 'caption',
@@ -101,7 +105,7 @@ export function RecordCard({ record }: { record: RecordResponse }) {
                 })}
               >
                 {mood.displayName}
-              </span>
+              </Link>
             ))}
           </div>
         )}

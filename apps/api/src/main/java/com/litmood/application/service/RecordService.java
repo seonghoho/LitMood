@@ -3,15 +3,12 @@ package com.litmood.application.service;
 import com.litmood.domain.exception.ErrorCode;
 import com.litmood.domain.exception.LitmoodException;
 import com.litmood.domain.model.Content;
-import com.litmood.domain.model.ContentSnapshot;
 import com.litmood.domain.model.ContentType;
 import com.litmood.domain.model.Mood;
-import com.litmood.domain.model.ProviderType;
 import com.litmood.domain.model.Record;
 import com.litmood.domain.model.RecordStatus;
 import com.litmood.domain.model.User;
 import com.litmood.domain.model.Visibility;
-import com.litmood.domain.repository.ContentRepository;
 import com.litmood.domain.repository.MoodRepository;
 import com.litmood.domain.repository.RecordQuery;
 import com.litmood.domain.repository.RecordRepository;
@@ -38,27 +35,24 @@ public class RecordService {
     private static final int MAX_PAGE_SIZE = 50;
 
     private final RecordRepository recordRepository;
-    private final ContentRepository contentRepository;
     private final MoodRepository moodRepository;
     private final UserRepository userRepository;
-    private final ContentSearchService contentSearchService;
+    private final ContentService contentService;
 
     public RecordService(
             RecordRepository recordRepository,
-            ContentRepository contentRepository,
             MoodRepository moodRepository,
             UserRepository userRepository,
-            ContentSearchService contentSearchService) {
+            ContentService contentService) {
         this.recordRepository = recordRepository;
-        this.contentRepository = contentRepository;
         this.moodRepository = moodRepository;
         this.userRepository = userRepository;
-        this.contentSearchService = contentSearchService;
+        this.contentService = contentService;
     }
 
     @Transactional
     public RecordResponse create(Long userId, CreateRecordRequest request) {
-        Content content = resolveContent(request.provider(), request.externalId());
+        Content content = contentService.resolveOrCreate(request.provider(), request.externalId());
 
         // 불변식 1 — 재기록은 새 기록이 아니라 수정으로 유도한다
         recordRepository.findActiveByUserAndContent(userId, content.getId()).ifPresent(existing -> {
@@ -189,22 +183,6 @@ public class RecordService {
                 pageItems.stream().map(RecordResponse::from).toList(),
                 nextCursor,
                 recordRepository.countTimeline(query));
-    }
-
-    /**
-     * 콘텐츠 스냅샷 확보 (F-02-05).
-     * 이미 있으면 재사용하고, 없으면 provider 에서 가져와 자체 DB 에 저장한다.
-     */
-    private Content resolveContent(ProviderType provider, String externalId) {
-        return contentRepository
-                .findByProviderAndExternalId(provider, externalId)
-                .orElseGet(() -> {
-                    ContentSnapshot snapshot = contentSearchService
-                            .findByExternalId(provider, externalId)
-                            .orElseThrow(() -> new LitmoodException(
-                                    ErrorCode.PROVIDER_UNAVAILABLE, "콘텐츠 정보를 가져오지 못했습니다"));
-                    return contentRepository.save(Content.from(snapshot));
-                });
     }
 
     /**

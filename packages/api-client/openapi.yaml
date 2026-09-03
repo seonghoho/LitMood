@@ -17,6 +17,8 @@ tags:
     description: 무드
   - name: System
     description: 시스템 상태
+  - name: Collections
+    description: 컬렉션
   - name: Users
     description: 사용자
   - name: Contents
@@ -42,6 +44,52 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/RecordResponse'
+  /api/v1/collections:
+    post:
+      tags:
+        - Collections
+      summary: 컬렉션 생성
+      description: 제목에서 공유용 slug 를 만든다
+      operationId: create_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCollectionRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CollectionResponse'
+  /api/v1/collections/{slug}/items:
+    post:
+      tags:
+        - Collections
+      summary: 콘텐츠 추가
+      description: 기록하지 않은 콘텐츠도 담을 수 있다
+      operationId: addItem
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCollectionItemRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CollectionResponse'
   /api/v1/auth/signup:
     post:
       tags:
@@ -181,6 +229,90 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/RecordResponse'
+  /api/v1/collections/{slug}:
+    get:
+      tags:
+        - Collections
+      summary: 컬렉션 조회
+      description: 공개 범위를 벗어나면 404 로 응답한다
+      operationId: get_1
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CollectionResponse'
+    delete:
+      tags:
+        - Collections
+      summary: 컬렉션 삭제
+      operationId: delete_1
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+    patch:
+      tags:
+        - Collections
+      summary: 컬렉션 수정
+      operationId: update_1
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCollectionRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CollectionResponse'
+  /api/v1/collections/{slug}/items/order:
+    patch:
+      tags:
+        - Collections
+      summary: 순서 일괄 변경
+      description: 큐레이션에서 순서는 의미다
+      operationId: reorder
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderItemsRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CollectionResponse'
   /api/v1/users/me:
     get:
       tags:
@@ -256,6 +388,29 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/RecordPage'
+      security: []
+  /api/v1/users/@{handle}/collections:
+    get:
+      tags:
+        - Users
+      summary: 공개 컬렉션 목록
+      description: 본인이 조회하면 비공개 컬렉션도 포함된다
+      operationId: collections
+      parameters:
+        - name: handle
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CollectionSummary'
       security: []
   /api/v1/records/me:
     get:
@@ -371,6 +526,34 @@ paths:
                 items:
                   $ref: '#/components/schemas/MoodTag'
       security: []
+  /api/v1/moods/{name}/contents:
+    get:
+      tags:
+        - Moods
+      summary: 무드별 콘텐츠 랭킹
+      description: 해당 무드로 기록된 공개 기록 수 기준. 이름은 정규화되어 비교된다.
+      operationId: contentsByMood
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 20
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/MoodDiscovery'
+      security: []
   /api/v1/contents/search:
     get:
       tags:
@@ -411,6 +594,31 @@ paths:
               schema:
                 $ref: '#/components/schemas/SearchResponse'
       security: []
+  /api/v1/collections/{slug}/items/{contentId}:
+    delete:
+      tags:
+        - Collections
+      summary: 콘텐츠 제거
+      operationId: removeItem
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contentId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CollectionResponse'
 components:
   schemas:
     CreateRecordRequest:
@@ -563,6 +771,87 @@ components:
         updatedAt:
           type: string
           format: date-time
+    CreateCollectionRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 100
+          minLength: 0
+        description:
+          type: string
+          maxLength: 500
+          minLength: 0
+        visibility:
+          type: string
+          enum:
+            - PUBLIC
+            - FOLLOWERS
+            - PRIVATE
+      required:
+        - title
+    CollectionItemResponse:
+      type: object
+      properties:
+        content:
+          $ref: '#/components/schemas/ContentRef'
+        position:
+          type: integer
+          format: int32
+        note:
+          type: string
+    CollectionResponse:
+      type: object
+      properties:
+        slug:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        coverUrl:
+          type: string
+        visibility:
+          type: string
+          enum:
+            - PUBLIC
+            - FOLLOWERS
+            - PRIVATE
+        itemCount:
+          type: integer
+          format: int32
+        ownerHandle:
+          type: string
+        ownerNickname:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CollectionItemResponse'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    AddCollectionItemRequest:
+      type: object
+      properties:
+        provider:
+          type: string
+          enum:
+            - NAVER_BOOK
+            - TMDB
+            - SPOTIFY
+        externalId:
+          type: string
+        note:
+          type: string
+          maxLength: 300
+          minLength: 0
+      required:
+        - externalId
+        - provider
     SignupRequest:
       type: object
       properties:
@@ -663,6 +952,36 @@ components:
         repeatCount:
           type: integer
           format: int32
+    UpdateCollectionRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 100
+          minLength: 0
+        description:
+          type: string
+          maxLength: 500
+          minLength: 0
+        coverUrl:
+          type: string
+        visibility:
+          type: string
+          enum:
+            - PUBLIC
+            - FOLLOWERS
+            - PRIVATE
+    ReorderItemsRequest:
+      type: object
+      description: 전달된 순서대로 position 을 다시 매긴다
+      properties:
+        contentIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+      required:
+        - contentIds
     PublicProfile:
       type: object
       properties:
@@ -687,6 +1006,50 @@ components:
         totalCount:
           type: integer
           format: int64
+    CollectionSummary:
+      type: object
+      description: 목록용 — 아이템 없이 개수만
+      properties:
+        slug:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        coverUrl:
+          type: string
+        visibility:
+          type: string
+          enum:
+            - PUBLIC
+            - FOLLOWERS
+            - PRIVATE
+        itemCount:
+          type: integer
+          format: int32
+        createdAt:
+          type: string
+          format: date-time
+    MoodDiscovery:
+      type: object
+      properties:
+        mood:
+          $ref: '#/components/schemas/MoodTag'
+        contents:
+          type: array
+          items:
+            $ref: '#/components/schemas/RankedContent'
+    RankedContent:
+      type: object
+      properties:
+        content:
+          $ref: '#/components/schemas/ContentRef'
+        recordCount:
+          type: integer
+          format: int64
+        averageRating:
+          type: number
+          format: double
     ContentSummary:
       type: object
       description: 정규화된 콘텐츠. provider 차이는 서버가 흡수한다.

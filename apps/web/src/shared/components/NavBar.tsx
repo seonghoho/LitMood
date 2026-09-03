@@ -47,6 +47,9 @@ export function NavBar() {
         <NavLink href="/timeline" active={pathname === '/timeline'}>
           내 기록
         </NavLink>
+        <NavLink href="/collections/new" active={pathname.startsWith('/collections')}>
+          컬렉션
+        </NavLink>
       </nav>
 
       {/* 세션 복구 전에는 아무것도 그리지 않는다 — 로그인/로그아웃이 깜빡이는 것을 막는다 */}

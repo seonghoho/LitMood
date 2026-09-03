@@ -158,6 +158,25 @@ class RecordApiTest extends AuthenticatedTest {
     }
 
     @Test
+    @DisplayName("null 필드도 응답에 키로 존재한다 — OpenAPI 계약과 일치해야 한다")
+    void nullFieldsArePresentInResponse() {
+        AuthResponse me = signupNewUser();
+        createRecord(me, simpleRequest(RecordStatus.WANT));
+
+        // 스펙은 rating 을 "존재하며 nullable" 로 선언한다. 키가 생략되면
+        // 스펙에서 생성된 클라이언트의 널 검사(rating !== null)가 통과해 버린다.
+        ResponseEntity<Map<String, Object>> response =
+                authedMap(me, HttpMethod.GET, "/api/v1/records/me", null);
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> items = (List<Map<String, Object>>) response.getBody().get("items");
+        assertThat(items).singleElement().satisfies(item -> {
+            assertThat(item).containsKey("rating").containsKey("review").containsKey("contextNote");
+            assertThat(item.get("rating")).isNull();
+        });
+    }
+
+    @Test
     @DisplayName("본인만 기록을 수정·삭제할 수 있다")
     void onlyOwnerCanModify() {
         AuthResponse owner = signupNewUser();

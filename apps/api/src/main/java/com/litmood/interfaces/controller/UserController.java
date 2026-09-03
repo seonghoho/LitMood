@@ -1,5 +1,6 @@
 package com.litmood.interfaces.controller;
 
+import com.litmood.application.service.CollectionService;
 import com.litmood.application.service.RecordService;
 import com.litmood.application.service.RecordService.TimelineFilter;
 import com.litmood.domain.exception.ErrorCode;
@@ -10,6 +11,7 @@ import com.litmood.domain.repository.UserRepository;
 import com.litmood.infrastructure.security.AuthPrincipal;
 import com.litmood.infrastructure.security.CurrentUser;
 import com.litmood.interfaces.dto.AuthDtos.UserSummary;
+import com.litmood.interfaces.dto.CollectionDtos.CollectionSummary;
 import com.litmood.interfaces.dto.RecordDtos.RecordPage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -29,10 +31,15 @@ public class UserController {
 
     private final UserRepository userRepository;
     private final RecordService recordService;
+    private final CollectionService collectionService;
 
-    public UserController(UserRepository userRepository, RecordService recordService) {
+    public UserController(
+            UserRepository userRepository,
+            RecordService recordService,
+            CollectionService collectionService) {
         this.userRepository = userRepository;
         this.recordService = recordService;
+        this.collectionService = collectionService;
     }
 
     @GetMapping("/me")
@@ -68,6 +75,14 @@ public class UserController {
             @RequestParam(required = false) Integer limit) {
         return recordService.publicTimeline(
                 handle, new TimelineFilter(types, null, null, null, null, null), cursor, limit);
+    }
+
+    @GetMapping("/@{handle}/collections")
+    @SecurityRequirements
+    @Operation(summary = "공개 컬렉션 목록", description = "본인이 조회하면 비공개 컬렉션도 포함된다")
+    public List<CollectionSummary> collections(
+            @CurrentUser AuthPrincipal principal, @PathVariable String handle) {
+        return collectionService.listByHandle(handle, principal == null ? null : principal.userId());
     }
 
     @Schema(name = "PublicProfile")
