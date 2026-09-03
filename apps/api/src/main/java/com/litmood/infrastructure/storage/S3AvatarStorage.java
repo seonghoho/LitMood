@@ -1,6 +1,8 @@
 package com.litmood.infrastructure.storage;
 
 import com.litmood.application.port.AvatarStorage;
+import com.litmood.domain.exception.ErrorCode;
+import com.litmood.domain.exception.LitmoodException;
 import com.litmood.infrastructure.config.LitmoodProperties;
 import java.net.URI;
 import java.time.Duration;
@@ -29,32 +31,52 @@ public class S3AvatarStorage implements AvatarStorage {
     private static final Map<String, String> EXTENSIONS =
             Map.of("image/jpeg", "jpg", "image/png", "png", "image/webp", "webp");
 
-    private final S3Presigner presigner;
-    private final String bucket;
+    private final LitmoodProperties.Storage storage;
     private final String publicUrlPrefix;
 
+    /**
+     * 자격증명이 없으면 기동이 아니라 발급 시점에 실패해야 한다.
+     * 아바타는 부가 기능인데, 키 하나가 비었다고 검색·기록·피드까지 함께 죽으면 안 된다.
+     */
+    private volatile S3Presigner presigner;
+
     public S3AvatarStorage(LitmoodProperties properties) {
-        LitmoodProperties.Storage storage = properties.storage();
-        this.bucket = storage.bucket();
+        this.storage = properties.storage();
         this.publicUrlPrefix = storage.endpoint() + "/" + storage.bucket() + "/";
-        this.presigner = S3Presigner.builder()
-                .endpointOverride(URI.create(storage.endpoint()))
-                .region(Region.US_EAST_1) // MinIO 는 리전을 쓰지 않지만 SDK 가 값을 요구한다
-                .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create(storage.accessKey(), storage.secretKey())))
-                // MinIO 는 가상 호스트 방식(bucket.host)을 로컬에서 해석하지 못한다
-                .serviceConfiguration(software.amazon.awssdk.services.s3.S3Configuration.builder()
-                        .pathStyleAccessEnabled(true)
-                        .build())
-                .build();
+    }
+
+    private S3Presigner presigner() {
+        S3Presigner current = presigner;
+        if (current != null) {
+            return current;
+        }
+        if (storage.accessKey() == null || storage.accessKey().isBlank()) {
+            throw new LitmoodException(ErrorCode.INTERNAL_ERROR, "이미지 저장소가 설정되지 않았습니다");
+        }
+        synchronized (this) {
+            if (presigner == null) {
+                presigner = S3Presigner.builder()
+                        .endpointOverride(URI.create(storage.endpoint()))
+                        .region(Region.US_EAST_1) // MinIO 는 리전을 쓰지 않지만 SDK 가 값을 요구한다
+                        .credentialsProvider(StaticCredentialsProvider.create(
+                                AwsBasicCredentials.create(storage.accessKey(), storage.secretKey())))
+                        // MinIO 는 가상 호스트 방식(bucket.host)을 로컬에서 해석하지 못한다
+                        .serviceConfiguration(software.amazon.awssdk.services.s3.S3Configuration.builder()
+                                .pathStyleAccessEnabled(true)
+                                .build())
+                        .build();
+            }
+            return presigner;
+        }
     }
 
     @Override
     public PresignedUpload presignAvatarUpload(long userId, String contentType) {
+        S3Presigner presigner = presigner();
         String key = "avatars/%d/%s.%s".formatted(userId, UUID.randomUUID(), EXTENSIONS.get(contentType));
 
         PutObjectRequest put = PutObjectRequest.builder()
-                .bucket(bucket)
+                .bucket(storage.bucket())
                 .key(key)
                 // 서명에 포함되므로 클라이언트가 다른 형식으로 바꿔 올릴 수 없다
                 .contentType(contentType)
