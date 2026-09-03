@@ -33,6 +33,14 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '21', cache: gradle }
 
+      # 빌드와 기동을 분리한다.
+      # bootRun 은 컴파일까지 포함하므로, 콜드 러너에서는 Gradle 배포판 내려받기와
+      # 컴파일에만 2분 이상 걸려 헬스체크 대기 창을 넘긴다. 먼저 jar 를 만들어 두면
+      # 기동 자체는 몇 초라 대기가 안정적이다.
+      - name: 빌드
+        working-directory: apps/api
+        run: ./gradlew bootJar --no-daemon
+
       - name: 애플리케이션 기동
         working-directory: apps/api
         env:
@@ -41,11 +49,16 @@ jobs:
           DB_PASSWORD: litmood_local
           JWT_SECRET: ci-only-not-a-real-secret-value-padding-32b
         run: |
-          ./gradlew bootRun --no-daemon &
-          for i in $(seq 1 60); do
-            curl -sf http://localhost:8080/actuator/health && break
+          java -jar build/libs/*.jar > /tmp/api.log 2>&1 &
+          for i in $(seq 1 40); do
+            curl -sf http://localhost:8080/actuator/health >/dev/null && break
             sleep 3
           done
+          if ! curl -sf http://localhost:8080/actuator/health >/dev/null; then
+            echo "::error::애플리케이션이 기동하지 않았습니다"
+            tail -50 /tmp/api.log
+            exit 1
+          fi
 
       - name: 스펙 추출
         run: curl -sf http://localhost:8080/v3/api-docs.yaml -o /tmp/openapi.yaml
