@@ -71,6 +71,8 @@ litmood:
       client-id: ${SPOTIFY_CLIENT_ID:}
       client-secret: ${SPOTIFY_CLIENT_SECRET:}
       base-url: https://api.spotify.com/v1
+      # 테스트에서 대역화할 수 있도록 설정으로 분리한다
+      token-url: https://accounts.spotify.com/api/token
   storage:
     endpoint: ${S3_ENDPOINT:http://localhost:9000}
     bucket: ${S3_BUCKET:litmood}

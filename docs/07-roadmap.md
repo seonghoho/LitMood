@@ -21,11 +21,12 @@
 
 ## M1. 인증 + 콘텐츠 검색
 
-- [ ] 이메일 가입/로그인, JWT 발급·회전 (F-01-01~03)
-- [ ] `ContentProvider` 인터페이스 + Naver / TMDB / Spotify 구현체
-- [ ] 가상 스레드 기반 병렬 검색 + 부분 실패 처리 + Redis 캐싱
-- [ ] 검색 UI (통합 검색창 + 타입별 탭)
-- [ ] springdoc → `openapi.json` → orval 파이프라인 구축
+- [x] 이메일 가입/로그인, JWT 발급·회전 + 재사용 감지 (F-01-01·03)
+- [x] `ContentProvider` 인터페이스 + Naver / TMDB / Spotify 구현체
+- [x] 가상 스레드 기반 병렬 검색 + 부분 실패 처리 + Redis 캐싱
+- [x] 검색 UI (통합 검색창 + 타입별 탭 + 부분 실패 안내)
+- [x] springdoc → `openapi.yaml` 추출 (orval 코드젠 배선은 M2 에서 연결)
+- [ ] OAuth2 소셜 로그인 (F-01-02) — Google / Kakao
 
 **완료 조건**: 로그인 후 "노르웨이의 숲" 검색 시 책·영화·음악 결과가 1.5초 내 표시
 

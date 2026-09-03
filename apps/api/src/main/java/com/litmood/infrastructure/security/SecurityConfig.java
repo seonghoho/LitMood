@@ -1,6 +1,7 @@
 package com.litmood.infrastructure.security;
 
 import com.litmood.infrastructure.config.LitmoodProperties;
+import com.litmood.interfaces.advice.RestAuthenticationEntryPoint;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -11,6 +12,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -24,9 +26,16 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
     private final LitmoodProperties properties;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RestAuthenticationEntryPoint authenticationEntryPoint;
 
-    public SecurityConfig(LitmoodProperties properties) {
+    public SecurityConfig(
+            LitmoodProperties properties,
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            RestAuthenticationEntryPoint authenticationEntryPoint) {
         this.properties = properties;
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.authenticationEntryPoint = authenticationEntryPoint;
     }
 
     @Bean
@@ -40,7 +49,8 @@ public class SecurityConfig {
                         // 공개 엔드포인트 — SEO 대상 페이지가 소비한다 (NFR-06)
                         .requestMatchers("/actuator/health/**", "/actuator/prometheus", "/api/v1/ping")
                         .permitAll()
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+                        // "/v3/api-docs.yaml" 은 "/v3/api-docs/**" 에 매칭되지 않으므로 별도로 허용한다
+                        .requestMatchers("/v3/api-docs", "/v3/api-docs.yaml", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                         .permitAll()
                         .requestMatchers("/api/v1/auth/**")
                         .permitAll()
@@ -51,7 +61,12 @@ public class SecurityConfig {
                         .anyRequest()
                         .authenticated());
 
-        // TODO(M1): JwtAuthenticationFilter 등록 — 토큰 검증 및 SecurityContext 주입
+        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                // Security 가 거부한 요청도 Problem Details 로 응답하게 한다
+                .exceptionHandling(handling -> handling
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(authenticationEntryPoint));
+
         return http.build();
     }
 

@@ -75,7 +75,21 @@ export default function HomePage() {
         </div>
       </section>
 
-      <nav className={flex({ gap: '4' })}>
+      <nav className={flex({ gap: '4', alignItems: 'center' })}>
+        <Link
+          href="/search"
+          className={css({
+            textStyle: 'body',
+            fontWeight: '600',
+            px: '4',
+            py: '2',
+            rounded: 'md',
+            bg: 'brand.default',
+            color: 'fg.onAccent',
+          })}
+        >
+          검색해 보기
+        </Link>
         <Link
           href="/health"
           className={css({ textStyle: 'caption', color: 'fg.muted', textDecoration: 'underline' })}

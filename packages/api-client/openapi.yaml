@@ -1,0 +1,280 @@
+openapi: 3.1.0
+info:
+  title: LitMood API
+  description: 책·영화·음악을 무드와 함께 기록하고 나누는 서비스의 API
+  version: v1
+servers:
+  - url: http://localhost:8080
+    description: local
+security:
+  - bearerAuth: []
+tags:
+  - name: Auth
+    description: 인증
+  - name: System
+    description: 시스템 상태
+  - name: Users
+    description: 사용자
+  - name: Contents
+    description: 콘텐츠 검색·조회
+paths:
+  /api/v1/auth/signup:
+    post:
+      tags:
+        - Auth
+      summary: 이메일 회원가입
+      operationId: signup
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+      security: []
+  /api/v1/auth/refresh:
+    post:
+      tags:
+        - Auth
+      summary: 액세스 토큰 재발급
+      description: refresh 토큰을 회전시킨다
+      operationId: refresh
+      parameters:
+        - name: refresh_token
+          in: cookie
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+      security: []
+  /api/v1/auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: 로그아웃
+      operationId: logout
+      parameters:
+        - name: refresh_token
+          in: cookie
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+      security: []
+  /api/v1/auth/login:
+    post:
+      tags:
+        - Auth
+      summary: 이메일 로그인
+      operationId: login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+      security: []
+  /api/v1/users/me:
+    get:
+      tags:
+        - Users
+      summary: 내 정보 조회
+      operationId: me
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/UserSummary'
+  /api/v1/ping:
+    get:
+      tags:
+        - System
+      summary: 헬스 체크
+      description: 애플리케이션 기동 여부를 확인한다
+      operationId: ping
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties: {}
+      security: []
+  /api/v1/contents/search:
+    get:
+      tags:
+        - Contents
+      summary: 통합 검색
+      description: 책·영화·음악을 동시에 검색한다. 일부 provider 가 실패해도 나머지 결과를 반환한다.
+      operationId: search
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            maxLength: 100
+            minLength: 0
+        - name: types
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - BOOK
+                - MOVIE
+                - MUSIC
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+      security: []
+components:
+  schemas:
+    SignupRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+          maxLength: 72
+          minLength: 8
+        handle:
+          type: string
+          pattern: '^[a-zA-Z0-9_]{3,30}$'
+        nickname:
+          type: string
+          maxLength: 50
+          minLength: 0
+      required:
+        - email
+        - handle
+        - nickname
+        - password
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        expiresIn:
+          type: integer
+          format: int64
+        user:
+          $ref: '#/components/schemas/UserSummary'
+    UserSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        handle:
+          type: string
+        nickname:
+          type: string
+        avatarUrl:
+          type: string
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - email
+        - password
+    ContentSummary:
+      type: object
+      description: 정규화된 콘텐츠. provider 차이는 서버가 흡수한다.
+      properties:
+        type:
+          type: string
+          enum:
+            - BOOK
+            - MOVIE
+            - MUSIC
+        provider:
+          type: string
+          enum:
+            - NAVER_BOOK
+            - TMDB
+            - SPOTIFY
+        externalId:
+          type: string
+        title:
+          type: string
+        creators:
+          type: array
+          items:
+            type: string
+        releasedOn:
+          type: string
+          format: date
+        coverUrl:
+          type: string
+        description:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: {}
+    SearchResponse:
+      type: object
+      description: 부분 실패를 허용한다. 실패한 provider 는 failedProviders 로 알린다 (NFR-03).
+      properties:
+        results:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/ContentSummary'
+        failedProviders:
+          type: array
+          items:
+            type: string
+            enum:
+              - NAVER_BOOK
+              - TMDB
+              - SPOTIFY
+        cached:
+          type: boolean
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

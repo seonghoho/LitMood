@@ -19,7 +19,7 @@ public record LitmoodProperties(Jwt jwt, Cache cache, Provider provider, Storage
 
         public record Tmdb(String apiKey, String baseUrl) {}
 
-        public record Spotify(String clientId, String clientSecret, String baseUrl) {}
+        public record Spotify(String clientId, String clientSecret, String baseUrl, String tokenUrl) {}
     }
 
     public record Storage(String endpoint, String bucket, String accessKey, String secretKey) {}
