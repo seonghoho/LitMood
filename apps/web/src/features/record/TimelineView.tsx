@@ -26,6 +26,8 @@ export function TimelineView() {
   const [total, setTotal] = useState(0)
   const [typeFilter, setTypeFilter] = useState<ContentType | null>(null)
   const [statusFilter, setStatusFilter] = useState<RecordStatus | null>(null)
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // 수정·삭제 다이얼로그는 목록이 소유한다 — 카드가 들고 있으면 갱신을 위로 올리기 어렵다
@@ -40,6 +42,9 @@ export function TimelineView() {
         const params = new URLSearchParams()
         if (typeFilter) params.set('types', typeFilter)
         if (statusFilter) params.set('status', statusFilter)
+        // 서버는 기록의 시작·종료일로 거른다 (F-03-06 으로 입력이 생겼다)
+        if (from) params.set('from', from)
+        if (to) params.set('to', to)
         if (nextCursor) params.set('cursor', nextCursor)
 
         const page = await apiGet<RecordPage>(`/api/v1/records/me?${params.toString()}`)
@@ -52,7 +57,7 @@ export function TimelineView() {
         setLoading(false)
       }
     },
-    [typeFilter, statusFilter],
+    [typeFilter, statusFilter, from, to],
   )
 
   // 필터가 바뀌면 커서를 버리고 처음부터 다시 읽는다
@@ -120,6 +125,46 @@ export function TimelineView() {
         </div>
       </div>
 
+      <div className={flex({ gap: '2', alignItems: 'center', flexWrap: 'wrap' })}>
+        <span className={css({ textStyle: 'caption', color: 'fg.muted' })}>기간</span>
+        <input
+          type="date"
+          value={from}
+          max={to || undefined}
+          onChange={(event) => setFrom(event.target.value)}
+          aria-label="시작일부터"
+          className={filterDateStyle}
+        />
+        <span className={css({ textStyle: 'caption', color: 'fg.muted' })}>—</span>
+        <input
+          type="date"
+          value={to}
+          min={from || undefined}
+          onChange={(event) => setTo(event.target.value)}
+          aria-label="종료일까지"
+          className={filterDateStyle}
+        />
+        {(from || to) && (
+          <button
+            type="button"
+            onClick={() => {
+              setFrom('')
+              setTo('')
+            }}
+            className={css({
+              textStyle: 'caption',
+              color: 'fg.muted',
+              cursor: 'pointer',
+              bg: 'transparent',
+              px: '2',
+              py: '1',
+            })}
+          >
+            기간 지우기
+          </button>
+        )}
+      </div>
+
       <p className={css({ textStyle: 'caption', color: 'fg.muted' })}>{total}개의 기록</p>
 
       {error && (
@@ -153,6 +198,7 @@ export function TimelineView() {
           <RecordCard
             key={record.id}
             record={record}
+            own
             onEdit={() => setEditing(record)}
             onDelete={() => setDeleting(record)}
           />
@@ -235,3 +281,15 @@ function FilterChip({
     </button>
   )
 }
+
+const filterDateStyle = css({
+  px: '2',
+  py: '1',
+  rounded: 'md',
+  textStyle: 'caption',
+  bg: 'bg.surface',
+  color: 'fg.default',
+  borderWidth: '1px',
+  borderStyle: 'solid',
+  borderColor: 'border.default',
+})

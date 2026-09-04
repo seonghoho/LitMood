@@ -5,6 +5,7 @@ import { token } from 'styled-system/tokens'
 import { FALLBACK_MOOD_COLOR } from '@litmood/ui'
 import { CONTENT_TYPE_LABEL } from '@/features/content/types'
 import { LikeButton } from '@/features/social/LikeButton'
+import { SpoilerReview } from './SpoilerReview'
 import { STATUS_LABEL, type RecordResponse } from './types'
 
 const TYPE_TOKEN = {
@@ -16,12 +17,19 @@ const TYPE_TOKEN = {
 export function RecordCard({
   record,
   showAuthor,
+  own,
   onEdit,
   onDelete,
 }: {
   record: RecordResponse
   /** 피드에서는 누가 남긴 기록인지 보여야 한다 */
   showAuthor?: boolean
+  /**
+   * 내가 쓴 기록인가. 본인에게는 스포일러를 가리지 않는다 (F-03-08).
+   * 서버 렌더링 시점에는 조회자를 알 수 없어 false 로 시작한다 —
+   * 과하게 가리는 쪽이 안전하고, 하이드레이션 후 교정된다.
+   */
+  own?: boolean
   /**
    * 본인 기록일 때만 넘긴다 (이슈 #5).
    * 카드가 스스로 판단하지 않는 이유: 공개 프로필은 비로그인 상태로 서버 렌더링되므로
@@ -127,9 +135,27 @@ export function RecordCard({
           </div>
         )}
 
-        {record.review && (
-          <p className={css({ textStyle: 'caption', color: 'fg.default', lineHeight: '1.6' })}>
-            {record.review}
+        {record.review &&
+          (record.isSpoiler && !own ? (
+            <SpoilerReview review={record.review} />
+          ) : (
+            <p className={css({ textStyle: 'caption', color: 'fg.default', lineHeight: '1.6' })}>
+              {record.review}
+            </p>
+          ))}
+
+        {(record.contextNote || record.startedAt || record.repeatCount > 0) && (
+          <p className={css({ textStyle: 'caption', color: 'fg.muted' })}>
+            {[
+              record.startedAt &&
+                (record.finishedAt && record.finishedAt !== record.startedAt
+                  ? `${record.startedAt} ~ ${record.finishedAt}`
+                  : record.startedAt),
+              record.contextNote,
+              record.repeatCount > 0 && `${record.repeatCount + 1}번째`,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
           </p>
         )}
 

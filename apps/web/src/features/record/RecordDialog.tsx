@@ -56,6 +56,16 @@ export function RecordDialog({
   const [moods, setMoods] = useState<string[]>(record?.moods.map((m) => m.displayName) ?? [])
   const [review, setReview] = useState(record?.review ?? '')
   const [visibility, setVisibility] = useState<Visibility>(record?.visibility ?? 'PUBLIC')
+  const [isSpoiler, setIsSpoiler] = useState(record?.isSpoiler ?? false)
+  const [contextNote, setContextNote] = useState(record?.contextNote ?? '')
+  const [startedAt, setStartedAt] = useState(record?.startedAt ?? '')
+  const [finishedAt, setFinishedAt] = useState(record?.finishedAt ?? '')
+  const [repeatCount, setRepeatCount] = useState(record?.repeatCount ?? 0)
+  // 기본은 접어둔다 — 필수 입력은 상태 하나뿐이어야 한다 (F-03-01 수용 기준).
+  // 이미 값이 있는 기록을 열 때는 펼쳐야 무엇이 들어 있는지 보인다.
+  const [showDetails, setShowDetails] = useState(
+    Boolean(record?.contextNote || record?.startedAt || record?.finishedAt || record?.repeatCount),
+  )
   const [curated, setCurated] = useState<MoodTag[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -104,7 +114,18 @@ export function RecordDialog({
     setError(null)
     try {
       if (record) {
-        const patch = buildRecordPatch(record, { status, rating, moods, review, visibility })
+        const patch = buildRecordPatch(record, {
+          status,
+          rating,
+          moods,
+          review,
+          visibility,
+          isSpoiler,
+          contextNote,
+          startedAt,
+          finishedAt,
+          repeatCount,
+        })
         // 바뀐 것이 없으면 요청 자체를 보내지 않는다
         const updated = Object.keys(patch).length
           ? await apiPatch<RecordResponse>(`/api/v1/records/${record.id}`, patch)
@@ -119,6 +140,11 @@ export function RecordDialog({
           moods,
           review: review.trim() || null,
           visibility,
+          isSpoiler,
+          contextNote: contextNote.trim() || null,
+          startedAt: startedAt || null,
+          finishedAt: finishedAt || null,
+          repeatCount,
         })
         onCreated?.(content!.externalId)
       }
@@ -269,6 +295,121 @@ export function RecordDialog({
           </div>
         </Field>
 
+        <div className={stack({ gap: '3' })}>
+          <button
+            type="button"
+            onClick={() => setShowDetails((open) => !open)}
+            aria-expanded={showDetails}
+            className={css({
+              textStyle: 'caption',
+              color: 'fg.muted',
+              cursor: 'pointer',
+              bg: 'transparent',
+              textAlign: 'left',
+              w: 'fit-content',
+            })}
+          >
+            {showDetails ? '자세히 접기' : '자세히 — 언제·어디서, 스포일러'}
+          </button>
+
+          {showDetails && (
+            <div className={stack({ gap: '4' })}>
+              <Field label="언제">
+                <div className={flex({ gap: '2', alignItems: 'center', flexWrap: 'wrap' })}>
+                  <input
+                    type="date"
+                    value={startedAt}
+                    max={finishedAt || undefined}
+                    onChange={(event) => setStartedAt(event.target.value)}
+                    aria-label="시작일"
+                    className={dateStyle}
+                  />
+                  <span className={css({ textStyle: 'caption', color: 'fg.muted' })}>—</span>
+                  <input
+                    type="date"
+                    value={finishedAt}
+                    min={startedAt || undefined}
+                    onChange={(event) => setFinishedAt(event.target.value)}
+                    aria-label="종료일"
+                    className={dateStyle}
+                  />
+                </div>
+              </Field>
+
+              <Field label="어디서">
+                <input
+                  type="text"
+                  value={contextNote}
+                  onChange={(event) => setContextNote(event.target.value)}
+                  maxLength={200}
+                  placeholder="지하철에서, 잠들기 전에…"
+                  className={css({
+                    w: 'full',
+                    px: '3',
+                    py: '2',
+                    rounded: 'md',
+                    textStyle: 'body',
+                    bg: 'bg.canvas',
+                    color: 'fg.default',
+                    borderWidth: '1px',
+                    borderStyle: 'solid',
+                    borderColor: 'border.default',
+                  })}
+                />
+              </Field>
+
+              <Field label="다시 본 횟수">
+                <div className={flex({ gap: '2', alignItems: 'center' })}>
+                  <button
+                    type="button"
+                    onClick={() => setRepeatCount((n) => Math.max(0, n - 1))}
+                    disabled={repeatCount === 0}
+                    aria-label="다시 본 횟수 줄이기"
+                    className={stepStyle}
+                  >
+                    −
+                  </button>
+                  <span className={css({ textStyle: 'body', color: 'fg.default', minW: '3ch' })}>
+                    {repeatCount}회
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setRepeatCount((n) => n + 1)}
+                    className={css({
+                      textStyle: 'caption',
+                      px: '3',
+                      py: '1.5',
+                      rounded: 'full',
+                      cursor: 'pointer',
+                      borderWidth: '1px',
+                      borderStyle: 'solid',
+                      borderColor: 'border.default',
+                      bg: 'bg.surface',
+                      color: 'fg.default',
+                    })}
+                  >
+                    다시 봄
+                  </button>
+                </div>
+              </Field>
+
+              <label className={flex({ gap: '2', alignItems: 'center', cursor: 'pointer' })}>
+                <input
+                  type="checkbox"
+                  checked={isSpoiler}
+                  onChange={(event) => setIsSpoiler(event.target.checked)}
+                />
+                <span className={css({ textStyle: 'body', color: 'fg.default' })}>
+                  스포일러 포함
+                </span>
+                <span className={css({ textStyle: 'caption', color: 'fg.muted' })}>
+                  다른 사람에게는 가려서 보입니다
+                </span>
+              </label>
+            </div>
+          )}
+        </div>
+
         {error && (
           <p role="alert" className={css({ textStyle: 'caption', color: 'danger.500' })}>
             {error}
@@ -366,3 +507,29 @@ function Chip({
     </button>
   )
 }
+
+const dateStyle = css({
+  px: '3',
+  py: '2',
+  rounded: 'md',
+  textStyle: 'body',
+  bg: 'bg.canvas',
+  color: 'fg.default',
+  borderWidth: '1px',
+  borderStyle: 'solid',
+  borderColor: 'border.default',
+})
+
+const stepStyle = css({
+  textStyle: 'body',
+  w: '32px',
+  h: '32px',
+  rounded: 'full',
+  cursor: 'pointer',
+  borderWidth: '1px',
+  borderStyle: 'solid',
+  borderColor: 'border.default',
+  bg: 'bg.surface',
+  color: 'fg.default',
+  _disabled: { opacity: 0.4, cursor: 'not-allowed' },
+})
