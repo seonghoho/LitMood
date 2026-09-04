@@ -106,7 +106,11 @@ public class RecordService {
         }
         // status 를 WANT 로 바꾸면 changeStatus 가 별점을 지운다.
         // 그 뒤에 별점을 적용해야 "WANT + 별점" 요청이 규칙대로 거부된다.
-        if (request.rating() != null) {
+        if (Boolean.TRUE.equals(request.clearRating())) {
+            // 상태는 그대로 두고 별점만 지운다. rating: null 은 "변경 없음"이라
+            // 지움을 표현할 수단이 따로 있어야 한다.
+            record.changeRating(null);
+        } else if (request.rating() != null) {
             record.changeRating(request.rating());
         }
         if (request.moods() != null) {

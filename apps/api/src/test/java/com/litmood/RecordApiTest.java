@@ -17,6 +17,7 @@ import com.litmood.domain.model.RecordStatus;
 import com.litmood.domain.model.Visibility;
 import com.litmood.support.AuthenticatedTest;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -185,7 +186,7 @@ class RecordApiTest extends AuthenticatedTest {
 
         ResponseEntity<Map<String, Object>> patch = authedMap(
                 stranger, HttpMethod.PATCH, "/api/v1/records/" + recordId,
-                new UpdateRecordRequest(null, null, null, "남의 기록 수정", null, null, null, null, null, null));
+                new UpdateRecordRequest(null, null, null, null, "남의 기록 수정", null, null, null, null, null, null));
         assertThat(patch.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
 
         ResponseEntity<Map<String, Object>> delete =
@@ -309,6 +310,82 @@ class RecordApiTest extends AuthenticatedTest {
     }
 
     // ── helpers ─────────────────────────────────────────────
+
+    // ── PATCH 부분 수정 의미론 (이슈 #5) ────────────────────
+    // 규칙: 넣지 않은 필드는 그대로 둔다. 지우려면 빈 문자열 또는 clearRating.
+
+    /** 별점·리뷰·맥락·날짜를 모두 채운 기록. */
+    private Long createFullRecord(AuthResponse me) {
+        return createRecord(
+                        me,
+                        new CreateRecordRequest(
+                                ProviderType.NAVER_BOOK, "9788937473135", RecordStatus.DONE,
+                                new BigDecimal("4.5"), List.of("새벽"), "처음 읽었을 때의 기록",
+                                false, Visibility.PUBLIC, "지하철에서",
+                                LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 5), 1))
+                .getBody()
+                .id();
+    }
+
+    @Test
+    @DisplayName("PATCH 에 넣지 않은 필드는 그대로 남는다 — 별점만 고쳐도 리뷰가 사라지지 않는다")
+    void omittedFieldsAreUntouched() {
+        AuthResponse me = signupNewUser();
+        Long recordId = createFullRecord(me);
+
+        ResponseEntity<Map<String, Object>> patched =
+                authedMap(me, HttpMethod.PATCH, "/api/v1/records/" + recordId, Map.of("rating", 3.0));
+
+        assertThat(patched.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(patched.getBody())
+                .containsEntry("rating", 3.0)
+                .containsEntry("review", "처음 읽었을 때의 기록")
+                .containsEntry("contextNote", "지하철에서")
+                .containsEntry("startedAt", "2026-01-01")
+                .containsEntry("finishedAt", "2026-01-05");
+    }
+
+    @Test
+    @DisplayName("리뷰를 빈 문자열로 보내면 지워진다 — null 은 \"변경 없음\"이라 지움을 표현할 수 없다")
+    void emptyStringClearsReview() {
+        AuthResponse me = signupNewUser();
+        Long recordId = createFullRecord(me);
+
+        ResponseEntity<Map<String, Object>> patched =
+                authedMap(me, HttpMethod.PATCH, "/api/v1/records/" + recordId, Map.of("review", ""));
+
+        assertThat(patched.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(patched.getBody()).containsEntry("review", null).containsEntry("contextNote", "지하철에서");
+    }
+
+    @Test
+    @DisplayName("clearRating 으로 상태는 유지한 채 별점만 지운다")
+    void clearRatingKeepsStatus() {
+        AuthResponse me = signupNewUser();
+        Long recordId = createFullRecord(me);
+
+        ResponseEntity<Map<String, Object>> patched = authedMap(
+                me, HttpMethod.PATCH, "/api/v1/records/" + recordId, Map.of("clearRating", true));
+
+        assertThat(patched.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(patched.getBody())
+                .containsEntry("rating", null)
+                .containsEntry("status", "DONE")
+                .containsEntry("review", "처음 읽었을 때의 기록");
+    }
+
+    @Test
+    @DisplayName("무드는 전체 교체다 — 빈 배열이면 모두 사라진다")
+    void moodsAreReplacedWholesale() {
+        AuthResponse me = signupNewUser();
+        Long recordId = createFullRecord(me);
+
+        ResponseEntity<Map<String, Object>> patched = authedMap(
+                me, HttpMethod.PATCH, "/api/v1/records/" + recordId, Map.of("moods", List.of()));
+
+        assertThat(patched.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat((List<?>) patched.getBody().get("moods")).isEmpty();
+    }
 
     private ResponseEntity<RecordResponse> createRecord(AuthResponse auth, CreateRecordRequest request) {
         return authed(auth, HttpMethod.POST, "/api/v1/records", request, RecordResponse.class);

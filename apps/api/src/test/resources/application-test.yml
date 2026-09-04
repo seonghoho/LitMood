@@ -1,4 +1,10 @@
 spring:
+  datasource:
+    hikari:
+      # 테스트 클래스마다 Spring 컨텍스트가 하나씩 뜨고 각자 풀을 잡는다.
+      # 운영 기본값(20)이면 컨텍스트 5개만 넘어가도 Postgres max_connections 를
+      # 넘겨 "too many clients already" 로 무관한 테스트가 무더기로 깨진다.
+      maximum-pool-size: 5
   jpa:
     hibernate:
       ddl-auto: validate
