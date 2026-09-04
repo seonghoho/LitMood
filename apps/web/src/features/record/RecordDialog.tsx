@@ -6,12 +6,14 @@ import { flex, stack } from 'styled-system/patterns'
 import { ApiError } from '@litmood/api-client'
 import { FALLBACK_MOOD_COLOR } from '@litmood/ui'
 import type { ContentSummary } from '@/features/content/types'
-import { apiGet, apiPost } from '@/shared/lib/api'
+import { apiGet, apiPatch, apiPost } from '@/shared/lib/api'
+import { buildRecordPatch } from './record-edit'
 import {
   allowsRating,
   STATUS_LABEL,
   VISIBILITY_LABEL,
   type MoodTag,
+  type RecordResponse,
   type RecordStatus,
   type Visibility,
 } from './types'
@@ -22,25 +24,38 @@ const RATINGS = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]
 const MAX_MOODS = 5
 
 /**
- * 기록 작성 (F-03-01).
+ * 기록 작성·수정 (F-03-01, 이슈 #5).
  *
  * 수용 기준: 검색 결과에서 <b>화면 전환 없이</b> 기록을 마칠 수 있어야 하고,
  * 필수 입력은 상태 하나뿐이어야 한다. 그래서 페이지가 아니라 다이얼로그다.
+ *
+ * <p>수정도 같은 화면을 쓴다. 만들 때와 고칠 때의 입력이 같은데 화면이 둘이면
+ * 규칙(WANT 로 바꾸면 별점이 사라진다 등)을 양쪽에 따로 구현하게 된다.
  */
 export function RecordDialog({
   content,
+  record,
   onClose,
   onCreated,
+  onUpdated,
 }: {
-  content: ContentSummary
+  /** 생성 모드의 대상 콘텐츠 */
+  content?: ContentSummary
+  /** 넘기면 수정 모드가 된다 */
+  record?: RecordResponse
   onClose: () => void
-  onCreated: (externalId: string) => void
+  onCreated?: (externalId: string) => void
+  onUpdated?: (record: RecordResponse) => void
 }) {
-  const [status, setStatus] = useState<RecordStatus>('DONE')
-  const [rating, setRating] = useState<number | null>(null)
-  const [moods, setMoods] = useState<string[]>([])
-  const [review, setReview] = useState('')
-  const [visibility, setVisibility] = useState<Visibility>('PUBLIC')
+  const editing = record != null
+  // 표시용 정보 — 수정 모드에서는 기록에 붙어 있는 콘텐츠 스냅샷을 쓴다
+  const display = record ? record.content : content!
+
+  const [status, setStatus] = useState<RecordStatus>(record?.status ?? 'DONE')
+  const [rating, setRating] = useState<number | null>(record?.rating ?? null)
+  const [moods, setMoods] = useState<string[]>(record?.moods.map((m) => m.displayName) ?? [])
+  const [review, setReview] = useState(record?.review ?? '')
+  const [visibility, setVisibility] = useState<Visibility>(record?.visibility ?? 'PUBLIC')
   const [curated, setCurated] = useState<MoodTag[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -88,16 +103,25 @@ export function RecordDialog({
     setSubmitting(true)
     setError(null)
     try {
-      await apiPost('/api/v1/records', {
-        provider: content.provider,
-        externalId: content.externalId,
-        status,
-        rating,
-        moods,
-        review: review.trim() || null,
-        visibility,
-      })
-      onCreated(content.externalId)
+      if (record) {
+        const patch = buildRecordPatch(record, { status, rating, moods, review, visibility })
+        // 바뀐 것이 없으면 요청 자체를 보내지 않는다
+        const updated = Object.keys(patch).length
+          ? await apiPatch<RecordResponse>(`/api/v1/records/${record.id}`, patch)
+          : record
+        onUpdated?.(updated)
+      } else {
+        await apiPost('/api/v1/records', {
+          provider: content!.provider,
+          externalId: content!.externalId,
+          status,
+          rating,
+          moods,
+          review: review.trim() || null,
+          visibility,
+        })
+        onCreated?.(content!.externalId)
+      }
       onClose()
     } catch (e) {
       setError(e instanceof ApiError ? e.problem.title : '기록을 저장하지 못했습니다')
@@ -125,7 +149,7 @@ export function RecordDialog({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-label={`${content.title} 기록하기`}
+        aria-label={`${display.title} ${editing ? '기록 수정' : '기록하기'}`}
         tabIndex={-1}
         className={stack({
           gap: '4',
@@ -140,11 +164,13 @@ export function RecordDialog({
         })}
       >
         <header className={stack({ gap: '1' })}>
-          <p className={css({ textStyle: 'caption', color: 'fg.muted' })}>기록하기</p>
-          <h2 className={css({ textStyle: 'title', color: 'fg.default' })}>{content.title}</h2>
-          {content.creators.length > 0 && (
+          <p className={css({ textStyle: 'caption', color: 'fg.muted' })}>
+            {editing ? '기록 수정' : '기록하기'}
+          </p>
+          <h2 className={css({ textStyle: 'title', color: 'fg.default' })}>{display.title}</h2>
+          {display.creators.length > 0 && (
             <p className={css({ textStyle: 'caption', color: 'fg.muted' })}>
-              {content.creators.join(', ')}
+              {display.creators.join(', ')}
             </p>
           )}
         </header>
@@ -281,7 +307,7 @@ export function RecordDialog({
               _disabled: { opacity: 0.6, cursor: 'not-allowed' },
             })}
           >
-            {submitting ? '저장 중…' : '기록하기'}
+            {submitting ? '저장 중…' : editing ? '저장' : '기록하기'}
           </button>
         </div>
       </div>

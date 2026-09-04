@@ -16,10 +16,19 @@ const TYPE_TOKEN = {
 export function RecordCard({
   record,
   showAuthor,
+  onEdit,
+  onDelete,
 }: {
   record: RecordResponse
   /** 피드에서는 누가 남긴 기록인지 보여야 한다 */
   showAuthor?: boolean
+  /**
+   * 본인 기록일 때만 넘긴다 (이슈 #5).
+   * 카드가 스스로 판단하지 않는 이유: 공개 프로필은 비로그인 상태로 서버 렌더링되므로
+   * 카드에는 "지금 보는 사람이 누구인지"가 없다. 목록을 아는 쪽이 정한다.
+   */
+  onEdit?: () => void
+  onDelete?: () => void
 }) {
   const { content } = record
 
@@ -138,8 +147,56 @@ export function RecordCard({
               @{record.authorHandle}
             </Link>
           )}
+
+          {(onEdit || onDelete) && (
+            <div className={flex({ gap: '2', ml: 'auto' })}>
+              {onEdit && (
+                <CardAction onClick={onEdit} label={`${content.title} 기록 수정`}>
+                  수정
+                </CardAction>
+              )}
+              {onDelete && (
+                <CardAction onClick={onDelete} label={`${content.title} 기록 삭제`} danger>
+                  삭제
+                </CardAction>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </article>
+  )
+}
+
+function CardAction({
+  onClick,
+  label,
+  danger,
+  children,
+}: {
+  onClick: () => void
+  /** 카드가 여러 개라 "수정" 만으로는 무엇을 수정하는지 알 수 없다 */
+  label: string
+  danger?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className={css({
+        textStyle: 'caption',
+        px: '2',
+        py: '1',
+        rounded: 'sm',
+        cursor: 'pointer',
+        bg: 'transparent',
+        color: danger ? 'danger.500' : 'fg.muted',
+        _hover: { bg: 'bg.subtle' },
+      })}
+    >
+      {children}
+    </button>
   )
 }
