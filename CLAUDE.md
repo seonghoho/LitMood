@@ -84,6 +84,7 @@ springdoc 은 애노테이션이 없으면 모든 필드를 optional 로 뽑습�
 | 타임라인 500                          | `SELECT DISTINCT` + `ORDER BY`는 Postgres에서 무효입니다. 컬렉션 조인 대신 EXISTS 서브쿼리를 쓰세요                             |
 | 테스트가 남의 데이터를 봄             | 테스트들이 Postgres 컨테이너 하나를 공유합니다. 콘텐츠는 테스트마다 고유 ISBN을 쓰세요                                          |
 | 응답에 필드가 없음                    | Jackson은 `always` 로 설정돼 있습니다. `non_null`로 되돌리지 마세요 — OpenAPI 계약과 어긋납니다                                 |
+| 애노테이션을 붙였는데 스펙에 안 나옴  | `bootRun` 을 다시 띄우기 전에 8080 을 비우지 않아 옛 인스턴스의 스펙을 받은 것입니다. `lsof -ti:8080 \| xargs -r kill -9`       |
 | 같은 enum 이 TS 타입 여러 개로 생성됨 | springdoc 은 enum 을 프로퍼티마다 인라인합니다. `OpenApiConfig` 의 `enumsAsRef` 로 공유 스키마가 되게 해 뒀습니다 — 끄지 마세요 |
 
 ## 테스트
