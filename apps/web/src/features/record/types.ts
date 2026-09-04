@@ -1,52 +1,18 @@
-import type { ContentType, ProviderType } from '@/features/content/types'
+import type { RecordStatus, Visibility } from '@litmood/api-client'
 
-export type RecordStatus = 'WANT' | 'DOING' | 'DONE' | 'DROPPED'
-export type Visibility = 'PUBLIC' | 'FOLLOWERS' | 'PRIVATE'
-
-export interface MoodTag {
-  name: string
-  displayName: string
-  color: string | null
-  curated: boolean
-}
-
-export interface ContentRef {
-  id: number
-  type: ContentType
-  provider: ProviderType
-  externalId: string
-  title: string
-  creators: string[]
-  releasedOn: string | null
-  coverUrl: string | null
-}
-
-export interface RecordResponse {
-  id: number
-  status: RecordStatus
-  rating: number | null
-  moods: MoodTag[]
-  review: string | null
-  isSpoiler: boolean
-  visibility: Visibility
-  contextNote: string | null
-  startedAt: string | null
-  finishedAt: string | null
-  repeatCount: number
-  likeCount: number
-  likedByMe: boolean
-  authorHandle: string | null
-  authorNickname: string | null
-  content: ContentRef
-  createdAt: string
-  updatedAt: string
-}
-
-export interface RecordPage {
-  items: RecordResponse[]
-  nextCursor: string | null
-  totalCount: number
-}
+/**
+ * 기록 모델의 정의는 백엔드 DTO 에 있고, OpenAPI 를 거쳐 생성된다 (ADR-008).
+ * 여기서는 생성 타입을 다시 내보내고 화면에서만 쓰는 라벨·판정을 함께 둔다.
+ * 타입을 손으로 고치지 마세요 — 백엔드를 고치고 코드젠을 다시 돌립니다.
+ */
+export type {
+  RecordStatus,
+  Visibility,
+  MoodTag,
+  ContentRef,
+  RecordResponse,
+  RecordPage,
+} from '@litmood/api-client'
 
 export const STATUS_LABEL: Record<RecordStatus, string> = {
   WANT: '보고싶다',

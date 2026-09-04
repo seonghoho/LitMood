@@ -1,29 +1,11 @@
+import type { ContentType, ProviderType } from '@litmood/api-client'
+
 /**
- * 백엔드가 정규화해 내려주는 콘텐츠 모델 (ADR-010).
- *
- * M1 시점에는 손으로 정의한다. orval 코드젠(ADR-008)이 붙으면
- * `@litmood/api-client` 의 생성 타입으로 교체하고 이 파일은 삭제한다.
+ * 콘텐츠 모델의 정의는 백엔드 DTO 에 있고, OpenAPI 를 거쳐 생성된다 (ADR-008).
+ * 여기서는 생성 타입을 다시 내보내고 화면에서만 쓰는 라벨을 함께 둔다.
+ * 타입을 손으로 고치지 마세요 — 백엔드를 고치고 코드젠을 다시 돌립니다.
  */
-export type ContentType = 'BOOK' | 'MOVIE' | 'MUSIC'
-export type ProviderType = 'NAVER_BOOK' | 'TMDB' | 'SPOTIFY'
-
-export interface ContentSummary {
-  type: ContentType
-  provider: ProviderType
-  externalId: string
-  title: string
-  creators: string[]
-  releasedOn: string | null
-  coverUrl: string | null
-  description: string | null
-  metadata: Record<string, unknown>
-}
-
-export interface SearchResponse {
-  results: Partial<Record<ContentType, ContentSummary[]>>
-  failedProviders: ProviderType[]
-  cached: boolean
-}
+export type { ContentType, ProviderType, ContentSummary, SearchResponse } from '@litmood/api-client'
 
 export const CONTENT_TYPES: ContentType[] = ['BOOK', 'MOVIE', 'MUSIC']
 
