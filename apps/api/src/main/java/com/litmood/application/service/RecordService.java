@@ -86,6 +86,8 @@ public class RecordService {
                 request.contextNote(),
                 request.startedAt(),
                 request.finishedAt(),
+                false, // 새로 만드는 기록이라 지울 날짜가 없다
+                false,
                 request.repeatCount());
         record.replaceMoods(resolveMoods(request.moods()));
 
@@ -123,6 +125,8 @@ public class RecordService {
                 request.contextNote(),
                 request.startedAt(),
                 request.finishedAt(),
+                Boolean.TRUE.equals(request.clearStartedAt()),
+                Boolean.TRUE.equals(request.clearFinishedAt()),
                 request.repeatCount());
 
         return RecordResponse.from(record, likedByMe(userId, List.of(record)));

@@ -10,6 +10,7 @@ public enum ErrorCode {
     VALIDATION_FAILED(HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다"),
     RATING_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "아직 보지 않은 콘텐츠에는 별점을 남길 수 없습니다"),
     MOOD_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "무드는 최대 5개까지 선택할 수 있습니다"),
+    INVALID_PERIOD(HttpStatus.BAD_REQUEST, "시작일이 종료일보다 늦을 수 없습니다"),
     UNSUPPORTED_IMAGE_TYPE(HttpStatus.BAD_REQUEST, "JPG, PNG, WebP 이미지만 올릴 수 있습니다"),
     FILE_TOO_LARGE(HttpStatus.BAD_REQUEST, "파일 크기는 5MB를 넘을 수 없습니다"),
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다"),
