@@ -151,11 +151,13 @@ public class Record extends BaseTimeEntity {
      * 별점만 고치려고 나머지를 생략하면 한줄평이 조용히 사라졌다.
      *
      * <p>문자열을 <b>지우려면 빈 문자열</b>을 보낸다 — null 은 "변경 없음"이라
-     * 지움을 표현할 수단이 따로 필요하다. 날짜는 아직 지울 수단이 없다(F-03-06 에서 다룬다).
+     * 지움을 표현할 수단이 따로 필요하다. 날짜는 빈 문자열을 쓸 수 없으므로
+     * {@code clearStartedAt}/{@code clearFinishedAt} 플래그로 지운다.
      */
     public void edit(
             String review, Boolean spoiler, Visibility visibility, String contextNote,
-            LocalDate startedAt, LocalDate finishedAt, Integer repeatCount) {
+            LocalDate startedAt, LocalDate finishedAt,
+            boolean clearStartedAt, boolean clearFinishedAt, Integer repeatCount) {
         if (review != null) {
             this.review = review.isBlank() ? null : review;
         }
@@ -168,14 +170,32 @@ public class Record extends BaseTimeEntity {
         if (contextNote != null) {
             this.contextNote = contextNote.isBlank() ? null : contextNote;
         }
+        // 새 값이 지움보다 우선한다 — 둘 다 왔다면 사용자가 원한 것은 새 값이다
         if (startedAt != null) {
             this.startedAt = startedAt;
+        } else if (clearStartedAt) {
+            this.startedAt = null;
         }
         if (finishedAt != null) {
             this.finishedAt = finishedAt;
+        } else if (clearFinishedAt) {
+            this.finishedAt = null;
         }
         if (repeatCount != null && repeatCount >= 0) {
             this.repeatCount = repeatCount;
+        }
+        validatePeriod();
+    }
+
+    /**
+     * 불변식 — 시작일은 종료일보다 늦을 수 없다.
+     *
+     * <p>DB 제약(ck_records_period)에도 같은 규칙이 있지만, 여기서 막지 않으면
+     * 제약 위반이 500 으로 새어 나가 사용자가 무엇을 잘못했는지 알 수 없다.
+     */
+    private void validatePeriod() {
+        if (startedAt != null && finishedAt != null && startedAt.isAfter(finishedAt)) {
+            throw new LitmoodException(ErrorCode.INVALID_PERIOD);
         }
     }
 

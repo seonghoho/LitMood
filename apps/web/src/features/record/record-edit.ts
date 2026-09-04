@@ -7,6 +7,12 @@ export interface RecordDraft {
   moods: string[]
   review: string
   visibility: Visibility
+  isSpoiler: boolean
+  contextNote: string
+  /** 빈 문자열이면 "날짜 없음" — input[type=date] 가 비었을 때의 값이다 */
+  startedAt: string
+  finishedAt: string
+  repeatCount: number
 }
 
 /** 서버가 받는 부분 수정 페이로드. 넣지 않은 필드는 변경되지 않는다. */
@@ -17,6 +23,13 @@ export interface RecordPatch {
   moods?: string[]
   review?: string
   visibility?: Visibility
+  isSpoiler?: boolean
+  contextNote?: string
+  startedAt?: string
+  finishedAt?: string
+  clearStartedAt?: true
+  clearFinishedAt?: true
+  repeatCount?: number
 }
 
 const sameMoods = (a: string[], b: string[]) =>
@@ -50,6 +63,23 @@ export function buildRecordPatch(record: RecordResponse, draft: RecordDraft): Re
   if (review !== (record.review ?? '')) patch.review = review
 
   if (draft.visibility !== record.visibility) patch.visibility = draft.visibility
+
+  if (draft.isSpoiler !== record.isSpoiler) patch.isSpoiler = draft.isSpoiler
+
+  const contextNote = draft.contextNote.trim()
+  if (contextNote !== (record.contextNote ?? '')) patch.contextNote = contextNote
+
+  // 날짜는 빈 문자열을 보낼 수 없다 — 지움은 플래그로 표현한다
+  if (draft.startedAt !== (record.startedAt ?? '')) {
+    if (draft.startedAt) patch.startedAt = draft.startedAt
+    else patch.clearStartedAt = true
+  }
+  if (draft.finishedAt !== (record.finishedAt ?? '')) {
+    if (draft.finishedAt) patch.finishedAt = draft.finishedAt
+    else patch.clearFinishedAt = true
+  }
+
+  if (draft.repeatCount !== record.repeatCount) patch.repeatCount = draft.repeatCount
 
   return patch
 }

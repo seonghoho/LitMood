@@ -12,6 +12,11 @@ const saved = {
   moods: [{ displayName: '새벽' }, { displayName: '먹먹함' }],
   review: '처음 읽었을 때의 기록',
   visibility: 'PUBLIC',
+  isSpoiler: false,
+  contextNote: '지하철에서',
+  startedAt: '2026-01-01',
+  finishedAt: '2026-01-05',
+  repeatCount: 1,
 } as unknown as RecordResponse
 
 const draftOf = (record: RecordResponse): RecordDraft => ({
@@ -20,6 +25,11 @@ const draftOf = (record: RecordResponse): RecordDraft => ({
   moods: record.moods.map((m) => m.displayName),
   review: record.review ?? '',
   visibility: record.visibility,
+  isSpoiler: record.isSpoiler,
+  contextNote: record.contextNote ?? '',
+  startedAt: record.startedAt ?? '',
+  finishedAt: record.finishedAt ?? '',
+  repeatCount: record.repeatCount,
 })
 
 describe('buildRecordPatch', () => {
@@ -63,9 +73,40 @@ describe('buildRecordPatch', () => {
     })
   })
 
+  it('장소 메모를 비우면 빈 문자열로 보낸다', () => {
+    expect(buildRecordPatch(saved, { ...draftOf(saved), contextNote: '' })).toEqual({
+      contextNote: '',
+    })
+  })
+
+  it('날짜를 비우면 clear 플래그로 보낸다 — 빈 문자열은 날짜가 아니다', () => {
+    expect(buildRecordPatch(saved, { ...draftOf(saved), startedAt: '' })).toEqual({
+      clearStartedAt: true,
+    })
+    expect(buildRecordPatch(saved, { ...draftOf(saved), finishedAt: '' })).toEqual({
+      clearFinishedAt: true,
+    })
+  })
+
+  it('날짜를 바꾸면 새 값만 보낸다', () => {
+    expect(buildRecordPatch(saved, { ...draftOf(saved), startedAt: '2026-02-01' })).toEqual({
+      startedAt: '2026-02-01',
+    })
+  })
+
+  it('스포일러 토글과 재소비 횟수도 담는다', () => {
+    expect(buildRecordPatch(saved, { ...draftOf(saved), isSpoiler: true })).toEqual({
+      isSpoiler: true,
+    })
+    expect(buildRecordPatch(saved, { ...draftOf(saved), repeatCount: 3 })).toEqual({
+      repeatCount: 3,
+    })
+  })
+
   it('여러 필드가 바뀌면 모두 담는다', () => {
     expect(
       buildRecordPatch(saved, {
+        ...draftOf(saved),
         status: 'DROPPED',
         rating: 2,
         moods: ['지침'],

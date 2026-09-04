@@ -62,6 +62,10 @@ public final class RecordDtos {
             @Schema(description = "빈 문자열이면 지운다") @Size(max = 200) String contextNote,
             LocalDate startedAt,
             LocalDate finishedAt,
+            @Schema(description = "true 면 시작일을 지운다. startedAt 을 함께 주면 새 값이 이긴다")
+                    Boolean clearStartedAt,
+            @Schema(description = "true 면 종료일을 지운다. finishedAt 을 함께 주면 새 값이 이긴다")
+                    Boolean clearFinishedAt,
             Integer repeatCount) {}
 
     @Schema(name = "MoodTag")

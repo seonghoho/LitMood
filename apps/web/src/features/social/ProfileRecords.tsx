@@ -57,7 +57,9 @@ export function ProfileRecords({
           아직 공개된 기록이 없습니다.
         </p>
       ) : (
-        records.map((record) => <RecordCard key={record.id} record={record} />)
+        records.map((record) => (
+          <RecordCard key={record.id} record={record} own={user?.handle === handle} />
+        ))
       )}
     </div>
   )

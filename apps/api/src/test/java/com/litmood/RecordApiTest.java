@@ -186,7 +186,8 @@ class RecordApiTest extends AuthenticatedTest {
 
         ResponseEntity<Map<String, Object>> patch = authedMap(
                 stranger, HttpMethod.PATCH, "/api/v1/records/" + recordId,
-                new UpdateRecordRequest(null, null, null, null, "남의 기록 수정", null, null, null, null, null, null));
+                new UpdateRecordRequest(
+                        null, null, null, null, "남의 기록 수정", null, null, null, null, null, null, null, null));
         assertThat(patch.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
 
         ResponseEntity<Map<String, Object>> delete =
@@ -385,6 +386,96 @@ class RecordApiTest extends AuthenticatedTest {
 
         assertThat(patched.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat((List<?>) patched.getBody().get("moods")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("clearStartedAt·clearFinishedAt 으로 날짜만 지운다")
+    void clearsDates() {
+        AuthResponse me = signupNewUser();
+        Long recordId = createFullRecord(me);
+
+        ResponseEntity<Map<String, Object>> patched = authedMap(
+                me,
+                HttpMethod.PATCH,
+                "/api/v1/records/" + recordId,
+                Map.of("clearStartedAt", true, "clearFinishedAt", true));
+
+        assertThat(patched.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(patched.getBody())
+                .containsEntry("startedAt", null)
+                .containsEntry("finishedAt", null)
+                // 나머지는 그대로다
+                .containsEntry("review", "처음 읽었을 때의 기록")
+                .containsEntry("contextNote", "지하철에서");
+    }
+
+    @Test
+    @DisplayName("날짜를 지우면서 동시에 새 값을 주면 새 값이 이긴다")
+    void newDateWinsOverClear() {
+        AuthResponse me = signupNewUser();
+        Long recordId = createFullRecord(me);
+
+        ResponseEntity<Map<String, Object>> patched = authedMap(
+                me,
+                HttpMethod.PATCH,
+                "/api/v1/records/" + recordId,
+                Map.of("clearStartedAt", true, "startedAt", "2026-01-03"));
+
+        assertThat(patched.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(patched.getBody()).containsEntry("startedAt", "2026-01-03");
+    }
+
+    @Test
+    @DisplayName("시작일이 종료일보다 늦으면 400 — DB 제약이 500 으로 새어 나오지 않는다")
+    void periodMustBeOrdered() {
+        AuthResponse me = signupNewUser();
+        Long recordId = createFullRecord(me);
+
+        // 종료일(2026-01-05)보다 늦은 시작일
+        ResponseEntity<Map<String, Object>> patched = authedMap(
+                me, HttpMethod.PATCH, "/api/v1/records/" + recordId, Map.of("startedAt", "2026-03-01"));
+
+        assertThat(patched.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(patched.getBody()).containsEntry("code", "INVALID_PERIOD");
+    }
+
+    @Test
+    @DisplayName("기록을 만들 때도 기간 순서를 검사한다")
+    void periodMustBeOrderedOnCreate() {
+        AuthResponse me = signupNewUser();
+
+        ResponseEntity<Map<String, Object>> created = authedMap(
+                me,
+                HttpMethod.POST,
+                "/api/v1/records",
+                Map.of(
+                        "provider", "NAVER_BOOK",
+                        "externalId", "9788937473135",
+                        "status", "DONE",
+                        "startedAt", "2026-02-01",
+                        "finishedAt", "2026-01-01"));
+
+        assertThat(created.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(created.getBody()).containsEntry("code", "INVALID_PERIOD");
+    }
+
+    @Test
+    @DisplayName("맥락 입력 필드도 수정된다 — 장소 메모·재소비 횟수·스포일러")
+    void editsContextFields() {
+        AuthResponse me = signupNewUser();
+        Long recordId = createFullRecord(me);
+
+        ResponseEntity<Map<String, Object>> patched = authedMap(
+                me,
+                HttpMethod.PATCH,
+                "/api/v1/records/" + recordId,
+                Map.of("contextNote", "카페에서", "repeatCount", 3, "isSpoiler", true));
+
+        assertThat(patched.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(patched.getBody())
+                .containsEntry("contextNote", "카페에서")
+                .containsEntry("repeatCount", 3)
+                .containsEntry("isSpoiler", true);
     }
 
     private ResponseEntity<RecordResponse> createRecord(AuthResponse auth, CreateRecordRequest request) {
