@@ -41,14 +41,25 @@ public final class RecordDtos {
             Integer repeatCount) {}
 
     @Schema(name = "UpdateRecordRequest")
+    /**
+     * 부분 수정. <b>넣지 않은 필드는 변경되지 않는다.</b>
+     *
+     * <p>지우려면: 문자열은 빈 문자열(""), 별점은 {@code clearRating: true}.
+     * null 을 "지움"으로 쓰면 "변경 없음"을 표현할 수 없어 필드 하나만 고치는 요청이
+     * 나머지를 날려버린다.
+     */
     public record UpdateRecordRequest(
             RecordStatus status,
             @DecimalMin("0.5") @DecimalMax("5.0") BigDecimal rating,
+            @Schema(description = "true 면 상태는 그대로 두고 별점만 지운다")
+                    Boolean clearRating,
             @Size(max = 5, message = "무드는 최대 5개까지 선택할 수 있습니다") List<@NotBlank @Size(max = 30) String> moods,
-            @Size(max = 2000) String review,
+            @Schema(description = "빈 문자열이면 지운다")
+                    @Size(max = 2000)
+                    String review,
             Boolean isSpoiler,
             Visibility visibility,
-            @Size(max = 200) String contextNote,
+            @Schema(description = "빈 문자열이면 지운다") @Size(max = 200) String contextNote,
             LocalDate startedAt,
             LocalDate finishedAt,
             Integer repeatCount) {}

@@ -8,8 +8,10 @@ import { ApiError } from '@litmood/api-client'
 import { CONTENT_TYPE_LABEL, CONTENT_TYPES, type ContentType } from '@/features/content/types'
 import { apiGet } from '@/shared/lib/api'
 import { useAuthStore } from '@/shared/store/auth'
+import { DeleteRecordDialog } from './DeleteRecordDialog'
 import { RecordCard } from './RecordCard'
-import { STATUS_LABEL, type RecordPage, type RecordStatus } from './types'
+import { RecordDialog } from './RecordDialog'
+import { STATUS_LABEL, type RecordPage, type RecordResponse, type RecordStatus } from './types'
 
 const STATUSES: RecordStatus[] = ['WANT', 'DOING', 'DONE', 'DROPPED']
 
@@ -26,6 +28,9 @@ export function TimelineView() {
   const [statusFilter, setStatusFilter] = useState<RecordStatus | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // 수정·삭제 다이얼로그는 목록이 소유한다 — 카드가 들고 있으면 갱신을 위로 올리기 어렵다
+  const [editing, setEditing] = useState<RecordResponse | null>(null)
+  const [deleting, setDeleting] = useState<RecordResponse | null>(null)
 
   const load = useCallback(
     async (nextCursor: string | null, append: boolean) => {
@@ -145,9 +150,36 @@ export function TimelineView() {
 
       <div className={stack({ gap: '3' })}>
         {items.map((record) => (
-          <RecordCard key={record.id} record={record} />
+          <RecordCard
+            key={record.id}
+            record={record}
+            onEdit={() => setEditing(record)}
+            onDelete={() => setDeleting(record)}
+          />
         ))}
       </div>
+
+      {editing && (
+        <RecordDialog
+          record={editing}
+          onClose={() => setEditing(null)}
+          onUpdated={(updated) =>
+            // 목록 전체를 다시 읽으면 스크롤 위치와 커서가 날아간다. 그 항목만 갈아끼운다.
+            setItems((prev) => prev.map((item) => (item.id === updated.id ? updated : item)))
+          }
+        />
+      )}
+
+      {deleting && (
+        <DeleteRecordDialog
+          record={deleting}
+          onClose={() => setDeleting(null)}
+          onDeleted={(recordId) => {
+            setItems((prev) => prev.filter((item) => item.id !== recordId))
+            setTotal((prev) => Math.max(0, prev - 1))
+          }}
+        />
+      )}
 
       {cursor && (
         <button

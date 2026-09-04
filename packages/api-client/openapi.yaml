@@ -1296,6 +1296,9 @@ components:
           type: number
           maximum: 5.0
           minimum: 0.5
+        clearRating:
+          type: boolean
+          description: true 면 상태는 그대로 두고 별점만 지운다
         moods:
           type: array
           items:
@@ -1306,6 +1309,7 @@ components:
           minItems: 0
         review:
           type: string
+          description: 빈 문자열이면 지운다
           maxLength: 2000
           minLength: 0
         isSpoiler:
@@ -1318,6 +1322,7 @@ components:
           - PRIVATE
         contextNote:
           type: string
+          description: 빈 문자열이면 지운다
           maxLength: 200
           minLength: 0
         startedAt:

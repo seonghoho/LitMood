@@ -144,19 +144,36 @@ public class Record extends BaseTimeEntity {
         this.moods.addAll(newMoods);
     }
 
+    /**
+     * 부분 수정 (PATCH). <b>넣지 않은(null) 필드는 건드리지 않는다.</b>
+     *
+     * <p>이전에는 review·contextNote·startedAt·finishedAt 을 무조건 덮어써서,
+     * 별점만 고치려고 나머지를 생략하면 한줄평이 조용히 사라졌다.
+     *
+     * <p>문자열을 <b>지우려면 빈 문자열</b>을 보낸다 — null 은 "변경 없음"이라
+     * 지움을 표현할 수단이 따로 필요하다. 날짜는 아직 지울 수단이 없다(F-03-06 에서 다룬다).
+     */
     public void edit(
             String review, Boolean spoiler, Visibility visibility, String contextNote,
             LocalDate startedAt, LocalDate finishedAt, Integer repeatCount) {
-        this.review = review;
+        if (review != null) {
+            this.review = review.isBlank() ? null : review;
+        }
         if (spoiler != null) {
             this.spoiler = spoiler;
         }
         if (visibility != null) {
             this.visibility = visibility;
         }
-        this.contextNote = contextNote;
-        this.startedAt = startedAt;
-        this.finishedAt = finishedAt;
+        if (contextNote != null) {
+            this.contextNote = contextNote.isBlank() ? null : contextNote;
+        }
+        if (startedAt != null) {
+            this.startedAt = startedAt;
+        }
+        if (finishedAt != null) {
+            this.finishedAt = finishedAt;
+        }
         if (repeatCount != null && repeatCount >= 0) {
             this.repeatCount = repeatCount;
         }
