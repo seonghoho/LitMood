@@ -1,5 +1,7 @@
 package com.litmood.interfaces.controller;
 
+import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
+
 import com.litmood.domain.model.Mood;
 import com.litmood.domain.repository.MoodDiscoveryRepository;
 import com.litmood.domain.repository.MoodRepository;
@@ -67,8 +69,14 @@ public class MoodController {
     }
 
     @Schema(name = "RankedContent")
-    public record RankedContent(ContentRef content, long recordCount, Double averageRating) {}
+    public record RankedContent(
+            @Schema(requiredMode = REQUIRED) ContentRef content,
+            @Schema(requiredMode = REQUIRED) long recordCount,
+            // 그 무드로 기록된 것 중 별점을 남긴 게 하나도 없으면 평균이 없다
+            @Schema(requiredMode = REQUIRED, types = {"number", "null"}) Double averageRating) {}
 
     @Schema(name = "MoodDiscovery")
-    public record MoodDiscovery(MoodTag mood, List<RankedContent> contents) {}
+    public record MoodDiscovery(
+            @Schema(requiredMode = REQUIRED) MoodTag mood,
+            @Schema(requiredMode = REQUIRED) List<RankedContent> contents) {}
 }

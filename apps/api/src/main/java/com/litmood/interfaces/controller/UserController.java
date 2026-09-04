@@ -1,5 +1,7 @@
 package com.litmood.interfaces.controller;
 
+import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
+
 import com.litmood.application.port.AvatarStorage;
 import com.litmood.application.service.CollectionService;
 import com.litmood.application.service.RecordService;
@@ -130,13 +132,13 @@ public class UserController {
 
     @Schema(name = "PublicProfile")
     public record PublicProfile(
-            String handle,
-            String nickname,
-            String bio,
-            String avatarUrl,
-            long followers,
-            long following,
-            boolean followedByMe) {
+            @Schema(requiredMode = REQUIRED) String handle,
+            @Schema(requiredMode = REQUIRED) String nickname,
+            @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String bio,
+            @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String avatarUrl,
+            @Schema(requiredMode = REQUIRED) long followers,
+            @Schema(requiredMode = REQUIRED) long following,
+            @Schema(requiredMode = REQUIRED) boolean followedByMe) {
 
         static PublicProfile from(User user, SocialService.FollowStats stats) {
             return new PublicProfile(

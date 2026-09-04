@@ -561,11 +561,7 @@ paths:
         schema:
           type: array
           items:
-            type: string
-            enum:
-            - BOOK
-            - MOVIE
-            - MUSIC
+            $ref: "#/components/schemas/ContentType"
       - name: cursor
         in: query
         required: false
@@ -622,23 +618,14 @@ paths:
         schema:
           type: array
           items:
-            type: string
-            enum:
-            - BOOK
-            - MOVIE
-            - MUSIC
+            $ref: "#/components/schemas/ContentType"
       - name: status
         in: query
         required: false
         schema:
           type: array
           items:
-            type: string
-            enum:
-            - WANT
-            - DOING
-            - DONE
-            - DROPPED
+            $ref: "#/components/schemas/RecordStatus"
       - name: moods
         in: query
         required: false
@@ -695,11 +682,7 @@ paths:
         schema:
           type: array
           items:
-            type: string
-            enum:
-            - BOOK
-            - MOVIE
-            - MUSIC
+            $ref: "#/components/schemas/ContentType"
       - name: moods
         in: query
         required: false
@@ -846,11 +829,7 @@ paths:
         schema:
           type: array
           items:
-            type: string
-            enum:
-            - BOOK
-            - MOVIE
-            - MUSIC
+            $ref: "#/components/schemas/ContentType"
       - name: limit
         in: query
         required: false
@@ -911,27 +890,28 @@ components:
           type: string
         publicUrl:
           type: string
+      required:
+      - publicUrl
+      - uploadUrl
+    ReportReason:
+      type: string
+      enum:
+      - SPAM
+      - ABUSE
+      - SEXUAL
+      - SPOILER
+      - COPYRIGHT
+      - OTHER
     ReportRequest:
       type: object
       properties:
         targetType:
-          type: string
-          enum:
-          - RECORD
-          - COLLECTION
-          - USER
+          $ref: "#/components/schemas/ReportTarget"
         targetId:
           type: integer
           format: int64
         reason:
-          type: string
-          enum:
-          - SPAM
-          - ABUSE
-          - SEXUAL
-          - SPOILER
-          - COPYRIGHT
-          - OTHER
+          $ref: "#/components/schemas/ReportReason"
         detail:
           type: string
           maxLength: 500
@@ -940,24 +920,21 @@ components:
       - reason
       - targetId
       - targetType
+    ReportTarget:
+      type: string
+      enum:
+      - RECORD
+      - COLLECTION
+      - USER
     CreateRecordRequest:
       type: object
       properties:
         provider:
-          type: string
-          enum:
-          - NAVER_BOOK
-          - TMDB
-          - SPOTIFY
+          $ref: "#/components/schemas/ProviderType"
         externalId:
           type: string
         status:
-          type: string
-          enum:
-          - WANT
-          - DOING
-          - DONE
-          - DROPPED
+          $ref: "#/components/schemas/RecordStatus"
         rating:
           type: number
           maximum: 5.0
@@ -977,11 +954,7 @@ components:
         isSpoiler:
           type: boolean
         visibility:
-          type: string
-          enum:
-          - PUBLIC
-          - FOLLOWERS
-          - PRIVATE
+          $ref: "#/components/schemas/Visibility"
         contextNote:
           type: string
           maxLength: 200
@@ -999,6 +972,25 @@ components:
       - externalId
       - provider
       - status
+    ProviderType:
+      type: string
+      enum:
+      - NAVER_BOOK
+      - TMDB
+      - SPOTIFY
+    RecordStatus:
+      type: string
+      enum:
+      - WANT
+      - DOING
+      - DONE
+      - DROPPED
+    Visibility:
+      type: string
+      enum:
+      - PUBLIC
+      - FOLLOWERS
+      - PRIVATE
     ContentRef:
       type: object
       description: 기록에 붙는 콘텐츠 요약
@@ -1007,17 +999,9 @@ components:
           type: integer
           format: int64
         type:
-          type: string
-          enum:
-          - BOOK
-          - MOVIE
-          - MUSIC
+          $ref: "#/components/schemas/ContentType"
         provider:
-          type: string
-          enum:
-          - NAVER_BOOK
-          - TMDB
-          - SPOTIFY
+          $ref: "#/components/schemas/ProviderType"
         externalId:
           type: string
         title:
@@ -1027,10 +1011,29 @@ components:
           items:
             type: string
         releasedOn:
-          type: string
+          type:
+          - string
+          - "null"
           format: date
         coverUrl:
-          type: string
+          type:
+          - string
+          - "null"
+      required:
+      - coverUrl
+      - creators
+      - externalId
+      - id
+      - provider
+      - releasedOn
+      - title
+      - type
+    ContentType:
+      type: string
+      enum:
+      - BOOK
+      - MOVIE
+      - MUSIC
     MoodTag:
       type: object
       properties:
@@ -1039,9 +1042,16 @@ components:
         displayName:
           type: string
         color:
-          type: string
+          type:
+          - string
+          - "null"
         curated:
           type: boolean
+      required:
+      - color
+      - curated
+      - displayName
+      - name
     RecordResponse:
       type: object
       properties:
@@ -1049,35 +1059,36 @@ components:
           type: integer
           format: int64
         status:
-          type: string
-          enum:
-          - WANT
-          - DOING
-          - DONE
-          - DROPPED
+          $ref: "#/components/schemas/RecordStatus"
         rating:
-          type: number
+          type:
+          - number
+          - "null"
         moods:
           type: array
           items:
             $ref: "#/components/schemas/MoodTag"
         review:
-          type: string
+          type:
+          - string
+          - "null"
         isSpoiler:
           type: boolean
         visibility:
-          type: string
-          enum:
-          - PUBLIC
-          - FOLLOWERS
-          - PRIVATE
+          $ref: "#/components/schemas/Visibility"
         contextNote:
-          type: string
+          type:
+          - string
+          - "null"
         startedAt:
-          type: string
+          type:
+          - string
+          - "null"
           format: date
         finishedAt:
-          type: string
+          type:
+          - string
+          - "null"
           format: date
         repeatCount:
           type: integer
@@ -1088,9 +1099,13 @@ components:
         likedByMe:
           type: boolean
         authorHandle:
-          type: string
+          type:
+          - string
+          - "null"
         authorNickname:
-          type: string
+          type:
+          - string
+          - "null"
         content:
           $ref: "#/components/schemas/ContentRef"
         createdAt:
@@ -1099,6 +1114,25 @@ components:
         updatedAt:
           type: string
           format: date-time
+      required:
+      - authorHandle
+      - authorNickname
+      - content
+      - contextNote
+      - createdAt
+      - finishedAt
+      - id
+      - isSpoiler
+      - likeCount
+      - likedByMe
+      - moods
+      - rating
+      - repeatCount
+      - review
+      - startedAt
+      - status
+      - updatedAt
+      - visibility
     LikeResponse:
       type: object
       properties:
@@ -1107,6 +1141,9 @@ components:
           format: int32
         likedByMe:
           type: boolean
+      required:
+      - likeCount
+      - likedByMe
     CreateCollectionRequest:
       type: object
       properties:
@@ -1119,11 +1156,7 @@ components:
           maxLength: 500
           minLength: 0
         visibility:
-          type: string
-          enum:
-          - PUBLIC
-          - FOLLOWERS
-          - PRIVATE
+          $ref: "#/components/schemas/Visibility"
       required:
       - title
     CollectionItemResponse:
@@ -1135,7 +1168,13 @@ components:
           type: integer
           format: int32
         note:
-          type: string
+          type:
+          - string
+          - "null"
+      required:
+      - content
+      - note
+      - position
     CollectionResponse:
       type: object
       properties:
@@ -1144,22 +1183,26 @@ components:
         title:
           type: string
         description:
-          type: string
+          type:
+          - string
+          - "null"
         coverUrl:
-          type: string
+          type:
+          - string
+          - "null"
         visibility:
-          type: string
-          enum:
-          - PUBLIC
-          - FOLLOWERS
-          - PRIVATE
+          $ref: "#/components/schemas/Visibility"
         itemCount:
           type: integer
           format: int32
         ownerHandle:
-          type: string
+          type:
+          - string
+          - "null"
         ownerNickname:
-          type: string
+          type:
+          - string
+          - "null"
         items:
           type: array
           items:
@@ -1170,15 +1213,23 @@ components:
         updatedAt:
           type: string
           format: date-time
+      required:
+      - coverUrl
+      - createdAt
+      - description
+      - itemCount
+      - items
+      - ownerHandle
+      - ownerNickname
+      - slug
+      - title
+      - updatedAt
+      - visibility
     AddCollectionItemRequest:
       type: object
       properties:
         provider:
-          type: string
-          enum:
-          - NAVER_BOOK
-          - TMDB
-          - SPOTIFY
+          $ref: "#/components/schemas/ProviderType"
         externalId:
           type: string
         note:
@@ -1219,6 +1270,10 @@ components:
           format: int64
         user:
           $ref: "#/components/schemas/UserSummary"
+      required:
+      - accessToken
+      - expiresIn
+      - user
     UserSummary:
       type: object
       properties:
@@ -1230,7 +1285,14 @@ components:
         nickname:
           type: string
         avatarUrl:
-          type: string
+          type:
+          - string
+          - "null"
+      required:
+      - avatarUrl
+      - handle
+      - id
+      - nickname
     LoginRequest:
       type: object
       properties:
@@ -1253,11 +1315,7 @@ components:
           maxLength: 200
           minLength: 0
         defaultVisibility:
-          type: string
-          enum:
-          - PUBLIC
-          - FOLLOWERS
-          - PRIVATE
+          $ref: "#/components/schemas/Visibility"
         avatarUrl:
           type: string
     MyProfile:
@@ -1273,25 +1331,28 @@ components:
         nickname:
           type: string
         bio:
-          type: string
+          type:
+          - string
+          - "null"
         avatarUrl:
-          type: string
+          type:
+          - string
+          - "null"
         defaultVisibility:
-          type: string
-          enum:
-          - PUBLIC
-          - FOLLOWERS
-          - PRIVATE
+          $ref: "#/components/schemas/Visibility"
+      required:
+      - avatarUrl
+      - bio
+      - defaultVisibility
+      - email
+      - handle
+      - id
+      - nickname
     UpdateRecordRequest:
       type: object
       properties:
         status:
-          type: string
-          enum:
-          - WANT
-          - DOING
-          - DONE
-          - DROPPED
+          $ref: "#/components/schemas/RecordStatus"
         rating:
           type: number
           maximum: 5.0
@@ -1315,11 +1376,7 @@ components:
         isSpoiler:
           type: boolean
         visibility:
-          type: string
-          enum:
-          - PUBLIC
-          - FOLLOWERS
-          - PRIVATE
+          $ref: "#/components/schemas/Visibility"
         contextNote:
           type: string
           description: 빈 문자열이면 지운다
@@ -1354,11 +1411,7 @@ components:
         coverUrl:
           type: string
         visibility:
-          type: string
-          enum:
-          - PUBLIC
-          - FOLLOWERS
-          - PRIVATE
+          $ref: "#/components/schemas/Visibility"
     ReorderItemsRequest:
       type: object
       description: 전달된 순서대로 position 을 다시 매긴다
@@ -1378,9 +1431,13 @@ components:
         nickname:
           type: string
         bio:
-          type: string
+          type:
+          - string
+          - "null"
         avatarUrl:
-          type: string
+          type:
+          - string
+          - "null"
         followers:
           type: integer
           format: int64
@@ -1389,6 +1446,14 @@ components:
           format: int64
         followedByMe:
           type: boolean
+      required:
+      - avatarUrl
+      - bio
+      - followedByMe
+      - followers
+      - following
+      - handle
+      - nickname
     RecordPage:
       type: object
       description: 커서 기반 페이지. nextCursor 가 null 이면 마지막 페이지다.
@@ -1398,10 +1463,16 @@ components:
           items:
             $ref: "#/components/schemas/RecordResponse"
         nextCursor:
-          type: string
+          type:
+          - string
+          - "null"
         totalCount:
           type: integer
           format: int64
+      required:
+      - items
+      - nextCursor
+      - totalCount
     CollectionSummary:
       type: object
       description: 목록용 — 아이템 없이 개수만
@@ -1411,21 +1482,29 @@ components:
         title:
           type: string
         description:
-          type: string
+          type:
+          - string
+          - "null"
         coverUrl:
-          type: string
+          type:
+          - string
+          - "null"
         visibility:
-          type: string
-          enum:
-          - PUBLIC
-          - FOLLOWERS
-          - PRIVATE
+          $ref: "#/components/schemas/Visibility"
         itemCount:
           type: integer
           format: int32
         createdAt:
           type: string
           format: date-time
+      required:
+      - coverUrl
+      - createdAt
+      - description
+      - itemCount
+      - slug
+      - title
+      - visibility
     MoodDiscovery:
       type: object
       properties:
@@ -1435,6 +1514,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/RankedContent"
+      required:
+      - contents
+      - mood
     RankedContent:
       type: object
       properties:
@@ -1444,24 +1526,22 @@ components:
           type: integer
           format: int64
         averageRating:
-          type: number
+          type:
+          - number
+          - "null"
           format: double
+      required:
+      - averageRating
+      - content
+      - recordCount
     ContentSummary:
       type: object
       description: 정규화된 콘텐츠. provider 차이는 서버가 흡수한다.
       properties:
         type:
-          type: string
-          enum:
-          - BOOK
-          - MOVIE
-          - MUSIC
+          $ref: "#/components/schemas/ContentType"
         provider:
-          type: string
-          enum:
-          - NAVER_BOOK
-          - TMDB
-          - SPOTIFY
+          $ref: "#/components/schemas/ProviderType"
         externalId:
           type: string
         title:
@@ -1471,15 +1551,31 @@ components:
           items:
             type: string
         releasedOn:
-          type: string
+          type:
+          - string
+          - "null"
           format: date
         coverUrl:
-          type: string
+          type:
+          - string
+          - "null"
         description:
-          type: string
+          type:
+          - string
+          - "null"
         metadata:
           type: object
           additionalProperties: {}
+      required:
+      - coverUrl
+      - creators
+      - description
+      - externalId
+      - metadata
+      - provider
+      - releasedOn
+      - title
+      - type
     SearchResponse:
       type: object
       description: 부분 실패를 허용한다. 실패한 provider 는 failedProviders 로 알린다 (NFR-03).
@@ -1493,13 +1589,13 @@ components:
         failedProviders:
           type: array
           items:
-            type: string
-            enum:
-            - NAVER_BOOK
-            - TMDB
-            - SPOTIFY
+            $ref: "#/components/schemas/ProviderType"
         cached:
           type: boolean
+      required:
+      - cached
+      - failedProviders
+      - results
   securitySchemes:
     bearerAuth:
       type: http

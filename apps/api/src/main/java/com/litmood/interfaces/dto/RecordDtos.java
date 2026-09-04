@@ -1,5 +1,7 @@
 package com.litmood.interfaces.dto;
 
+import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
+
 import com.litmood.domain.model.Content;
 import com.litmood.domain.model.ContentType;
 import com.litmood.domain.model.Mood;
@@ -69,7 +71,11 @@ public final class RecordDtos {
             Integer repeatCount) {}
 
     @Schema(name = "MoodTag")
-    public record MoodTag(String name, String displayName, String color, boolean curated) {
+    public record MoodTag(
+            @Schema(requiredMode = REQUIRED) String name,
+            @Schema(requiredMode = REQUIRED) String displayName,
+            @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String color,
+            @Schema(requiredMode = REQUIRED) boolean curated) {
         public static MoodTag from(Mood mood) {
             return new MoodTag(mood.getName(), mood.getDisplayName(), mood.getColor(), mood.isCurated());
         }
@@ -77,14 +83,14 @@ public final class RecordDtos {
 
     @Schema(name = "ContentRef", description = "기록에 붙는 콘텐츠 요약")
     public record ContentRef(
-            Long id,
-            ContentType type,
-            ProviderType provider,
-            String externalId,
-            String title,
-            List<String> creators,
-            LocalDate releasedOn,
-            String coverUrl) {
+            @Schema(requiredMode = REQUIRED) Long id,
+            @Schema(requiredMode = REQUIRED) ContentType type,
+            @Schema(requiredMode = REQUIRED) ProviderType provider,
+            @Schema(requiredMode = REQUIRED) String externalId,
+            @Schema(requiredMode = REQUIRED) String title,
+            @Schema(requiredMode = REQUIRED) List<String> creators,
+            @Schema(requiredMode = REQUIRED, types = {"string", "null"}) LocalDate releasedOn,
+            @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String coverUrl) {
 
         public static ContentRef from(Content content) {
             return new ContentRef(
@@ -101,24 +107,25 @@ public final class RecordDtos {
 
     @Schema(name = "RecordResponse")
     public record RecordResponse(
-            Long id,
-            RecordStatus status,
-            BigDecimal rating,
-            List<MoodTag> moods,
-            String review,
-            boolean isSpoiler,
-            Visibility visibility,
-            String contextNote,
-            LocalDate startedAt,
-            LocalDate finishedAt,
-            int repeatCount,
-            int likeCount,
-            boolean likedByMe,
-            String authorHandle,
-            String authorNickname,
-            ContentRef content,
-            Instant createdAt,
-            Instant updatedAt) {
+            @Schema(requiredMode = REQUIRED) Long id,
+            @Schema(requiredMode = REQUIRED) RecordStatus status,
+            @Schema(requiredMode = REQUIRED, types = {"number", "null"}) BigDecimal rating,
+            @Schema(requiredMode = REQUIRED) List<MoodTag> moods,
+            @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String review,
+            @Schema(requiredMode = REQUIRED) boolean isSpoiler,
+            @Schema(requiredMode = REQUIRED) Visibility visibility,
+            @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String contextNote,
+            @Schema(requiredMode = REQUIRED, types = {"string", "null"}) LocalDate startedAt,
+            @Schema(requiredMode = REQUIRED, types = {"string", "null"}) LocalDate finishedAt,
+            @Schema(requiredMode = REQUIRED) int repeatCount,
+            @Schema(requiredMode = REQUIRED) int likeCount,
+            @Schema(requiredMode = REQUIRED) boolean likedByMe,
+            // 비로그인 공개 조회에서는 작성자를 싣지 않는다
+            @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String authorHandle,
+            @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String authorNickname,
+            @Schema(requiredMode = REQUIRED) ContentRef content,
+            @Schema(requiredMode = REQUIRED) Instant createdAt,
+            @Schema(requiredMode = REQUIRED) Instant updatedAt) {
 
         /**
          * @param likedTargetIds 조회자가 좋아요를 누른 기록 id 집합.
@@ -148,5 +155,8 @@ public final class RecordDtos {
     }
 
     @Schema(name = "RecordPage", description = "커서 기반 페이지. nextCursor 가 null 이면 마지막 페이지다.")
-    public record RecordPage(List<RecordResponse> items, String nextCursor, long totalCount) {}
+    public record RecordPage(
+            @Schema(requiredMode = REQUIRED) List<RecordResponse> items,
+            @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String nextCursor,
+            @Schema(requiredMode = REQUIRED) long totalCount) {}
 }
