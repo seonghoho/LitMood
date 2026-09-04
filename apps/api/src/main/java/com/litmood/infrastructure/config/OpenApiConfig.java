@@ -1,11 +1,13 @@
 package com.litmood.infrastructure.config;
 
+import io.swagger.v3.core.jackson.ModelResolver;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
+import jakarta.annotation.PostConstruct;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -35,5 +37,24 @@ public class OpenApiConfig {
                                         .scheme("bearer")
                                         .bearerFormat("JWT")))
                 .addSecurityItem(new SecurityRequirement().addList(BEARER));
+    }
+
+    /**
+     * enum 을 프로퍼티마다 인라인하지 않고 공유 스키마로 참조하게 한다.
+     *
+     * <p>기본 동작은 enum 을 쓰는 자리마다 값 목록을 복제해 넣는다. 그러면 코드젠이
+     * {@code ContentRefType}, {@code ContentSummaryType} 처럼 같은 enum 을 별개 타입으로
+     * 19개나 만들어 내고, 프론트에서 {@code Record<ContentType, string>} 같은
+     * "라벨은 콘텐츠 타입마다 하나" 라는 관계를 타입으로 표현할 수 없게 된다.
+     * $ref 로 내보내면 도메인 enum 하나가 TS 타입 하나로 대응된다 (ADR-008).
+     *
+     * <p>플래그만 켜고 {@link ModelResolver} 빈은 직접 만들지 않는다. 빈을 대체하면
+     * springdoc 이 자기 ObjectMapper 로 구성해 둔 리졸버가 밀려나면서 스키마에서
+     * {@code type: object} 가 통째로 빠진다(31개 → 4개). 플래그는 스키마를 해석하는
+     * 시점에 읽히므로 여기서 세팅해도 늦지 않다.
+     */
+    @PostConstruct
+    void enableSharedEnumSchemas() {
+        ModelResolver.enumsAsRef = true;
     }
 }

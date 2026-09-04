@@ -1,5 +1,7 @@
 package com.litmood.interfaces.dto;
 
+import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
+
 import com.litmood.domain.model.User;
 import com.litmood.domain.model.Visibility;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -24,13 +26,13 @@ public final class UserDtos {
     /** 내 정보 — 공개 프로필과 달리 email 과 기본 공개범위를 포함한다. */
     @Schema(name = "MyProfile")
     public record MyProfile(
-            Long id,
-            String email,
-            String handle,
-            String nickname,
-            String bio,
-            String avatarUrl,
-            Visibility defaultVisibility) {
+            @Schema(requiredMode = REQUIRED) Long id,
+            @Schema(requiredMode = REQUIRED) String email,
+            @Schema(requiredMode = REQUIRED) String handle,
+            @Schema(requiredMode = REQUIRED) String nickname,
+            @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String bio,
+            @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String avatarUrl,
+            @Schema(requiredMode = REQUIRED) Visibility defaultVisibility) {
 
         public static MyProfile from(User user) {
             return new MyProfile(
@@ -50,5 +52,7 @@ public final class UserDtos {
             @NotNull(message = "파일 크기를 알 수 없습니다") @Positive Long contentLength) {}
 
     @Schema(name = "AvatarUploadResponse", description = "uploadUrl 로 PUT 한 뒤 publicUrl 을 PATCH /users/me 에 저장한다")
-    public record AvatarUploadResponse(String uploadUrl, String publicUrl) {}
+    public record AvatarUploadResponse(
+            @Schema(requiredMode = REQUIRED) String uploadUrl,
+            @Schema(requiredMode = REQUIRED) String publicUrl) {}
 }

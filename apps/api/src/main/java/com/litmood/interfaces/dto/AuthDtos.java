@@ -1,5 +1,7 @@
 package com.litmood.interfaces.dto;
 
+import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
+
 import com.litmood.domain.model.User;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
@@ -31,10 +33,17 @@ public final class AuthDtos {
             @NotBlank(message = "비밀번호를 입력해 주세요") String password) {}
 
     @Schema(name = "AuthResponse")
-    public record AuthResponse(String accessToken, long expiresIn, UserSummary user) {}
+    public record AuthResponse(
+            @Schema(requiredMode = REQUIRED) String accessToken,
+            @Schema(requiredMode = REQUIRED) long expiresIn,
+            @Schema(requiredMode = REQUIRED) UserSummary user) {}
 
     @Schema(name = "UserSummary")
-    public record UserSummary(Long id, String handle, String nickname, String avatarUrl) {
+    public record UserSummary(
+            @Schema(requiredMode = REQUIRED) Long id,
+            @Schema(requiredMode = REQUIRED) String handle,
+            @Schema(requiredMode = REQUIRED) String nickname,
+            @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String avatarUrl) {
         public static UserSummary from(User user) {
             return new UserSummary(user.getId(), user.getHandle(), user.getNickname(), user.getAvatarUrl());
         }

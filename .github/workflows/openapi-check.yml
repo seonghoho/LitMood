@@ -5,7 +5,7 @@ name: OpenAPI 계약 검사
 
 on:
   pull_request:
-    paths: ['apps/api/**', 'packages/api-client/openapi.yaml']
+    paths: ['apps/api/**', 'packages/api-client/**']
 
 jobs:
   contract:
@@ -83,3 +83,25 @@ jobs:
         with:
           base: 'https://raw.githubusercontent.com/${{ github.repository }}/${{ github.base_ref }}/packages/api-client/openapi.yaml'
           revision: /tmp/openapi.yaml
+
+  # 커밋된 생성 타입이 스펙과 어긋나지 않는지 본다.
+  # 생성물을 커밋하기로 했으므로(백엔드를 띄우지 않고도 프론트가 빌드된다),
+  # "커밋된 것 == 스펙에서 생성된 것" 을 지켜 주는 검사가 따로 필요하다.
+  # 백엔드 기동은 필요 없다 — 커밋된 openapi.yaml 만 읽는다.
+  codegen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @litmood/api-client codegen
+      - name: 생성 결과가 커밋과 같은지 비교
+        run: |
+          if ! git diff --exit-code -- packages/api-client/src/generated; then
+            echo "::error::생성 타입이 openapi.yaml 과 어긋납니다."
+            echo "다음 명령으로 갱신 후 커밋하세요:"
+            echo "  pnpm --filter @litmood/api-client codegen"
+            exit 1
+          fi

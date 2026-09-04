@@ -1,5 +1,7 @@
 package com.litmood.interfaces.dto;
 
+import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
+
 import com.litmood.domain.model.Report;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
@@ -10,10 +12,15 @@ public final class SocialDtos {
     private SocialDtos() {}
 
     @Schema(name = "FollowStatsResponse")
-    public record FollowStatsResponse(long followers, long following, boolean followedByMe) {}
+    public record FollowStatsResponse(
+            @Schema(requiredMode = REQUIRED) long followers,
+            @Schema(requiredMode = REQUIRED) long following,
+            @Schema(requiredMode = REQUIRED) boolean followedByMe) {}
 
     @Schema(name = "LikeResponse")
-    public record LikeResponse(int likeCount, boolean likedByMe) {}
+    public record LikeResponse(
+            @Schema(requiredMode = REQUIRED) int likeCount,
+            @Schema(requiredMode = REQUIRED) boolean likedByMe) {}
 
     @Schema(name = "ReportRequest")
     public record ReportRequest(

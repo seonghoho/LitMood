@@ -1,5 +1,7 @@
 package com.litmood.interfaces.dto;
 
+import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
+
 import com.litmood.domain.model.Collection;
 import com.litmood.domain.model.CollectionItem;
 import com.litmood.domain.model.ProviderType;
@@ -40,7 +42,10 @@ public final class CollectionDtos {
     public record ReorderItemsRequest(@NotEmpty(message = "순서를 지정해 주세요") List<Long> contentIds) {}
 
     @Schema(name = "CollectionItemResponse")
-    public record CollectionItemResponse(ContentRef content, int position, String note) {
+    public record CollectionItemResponse(
+            @Schema(requiredMode = REQUIRED) ContentRef content,
+            @Schema(requiredMode = REQUIRED) int position,
+            @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String note) {
         static CollectionItemResponse from(CollectionItem item) {
             return new CollectionItemResponse(
                     ContentRef.from(item.getContent()), item.getPosition(), item.getNote());
@@ -49,13 +54,14 @@ public final class CollectionDtos {
 
     @Schema(name = "CollectionSummary", description = "목록용 — 아이템 없이 개수만")
     public record CollectionSummary(
-            String slug,
-            String title,
-            String description,
-            String coverUrl,
-            Visibility visibility,
-            int itemCount,
-            Instant createdAt) {
+            @Schema(requiredMode = REQUIRED) String slug,
+            @Schema(requiredMode = REQUIRED) String title,
+            @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String description,
+            // 표지를 직접 지정하지 않으면 첫 아이템에서 끌어오고, 그것도 없으면 null 이다
+            @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String coverUrl,
+            @Schema(requiredMode = REQUIRED) Visibility visibility,
+            @Schema(requiredMode = REQUIRED) int itemCount,
+            @Schema(requiredMode = REQUIRED) Instant createdAt) {
 
         public static CollectionSummary from(Collection collection) {
             return new CollectionSummary(
@@ -71,17 +77,17 @@ public final class CollectionDtos {
 
     @Schema(name = "CollectionResponse")
     public record CollectionResponse(
-            String slug,
-            String title,
-            String description,
-            String coverUrl,
-            Visibility visibility,
-            int itemCount,
-            String ownerHandle,
-            String ownerNickname,
-            List<CollectionItemResponse> items,
-            Instant createdAt,
-            Instant updatedAt) {
+            @Schema(requiredMode = REQUIRED) String slug,
+            @Schema(requiredMode = REQUIRED) String title,
+            @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String description,
+            @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String coverUrl,
+            @Schema(requiredMode = REQUIRED) Visibility visibility,
+            @Schema(requiredMode = REQUIRED) int itemCount,
+            @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String ownerHandle,
+            @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String ownerNickname,
+            @Schema(requiredMode = REQUIRED) List<CollectionItemResponse> items,
+            @Schema(requiredMode = REQUIRED) Instant createdAt,
+            @Schema(requiredMode = REQUIRED) Instant updatedAt) {
 
         public static CollectionResponse from(Collection collection, String ownerHandle, String ownerNickname) {
             return new CollectionResponse(

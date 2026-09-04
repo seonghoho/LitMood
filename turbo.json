@@ -5,7 +5,7 @@
   "globalEnv": ["NODE_ENV"],
   "tasks": {
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "^codegen"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
     "dev": {
@@ -13,18 +13,19 @@
       "persistent": true
     },
     "lint": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build", "^codegen"]
     },
     "typecheck": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "^codegen"],
       "outputs": []
     },
     "test": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "^codegen"],
       "outputs": ["coverage/**"]
     },
     "codegen": {
-      "cache": false
+      "inputs": ["openapi.yaml", "orval.config.ts"],
+      "outputs": ["src/generated/**"]
     }
   }
 }
