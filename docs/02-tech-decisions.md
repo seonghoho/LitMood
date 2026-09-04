@@ -124,7 +124,7 @@
 Spring 컨트롤러 (springdoc-openapi)
         ↓ 빌드 시 자동 생성
    openapi.json
-        ├─→ orval → packages/api-client (TS 타입 + TanStack Query 훅)
+        ├─→ orval → packages/api-client (TS 모델 타입 + fetch 함수)
         └─→ Postman collection import (수동 관리 폐기)
 ```
 

@@ -55,19 +55,36 @@ DB 제약으로도 이중 방어합니다. 규칙을 추가할 때 두 곳 모�
 검색은 백엔드가 프록시합니다.
 
 **OpenAPI가 API 계약의 진실 원천** (ADR-008)
-컨트롤러를 바꾸면 `packages/api-client/openapi.yaml`을 갱신하세요:
-`curl -sf http://localhost:8080/v3/api-docs.yaml -o packages/api-client/openapi.yaml`
+프론트의 모델 타입은 백엔드 DTO 에서 생성됩니다. `apps/web/src/features/*/types.ts`는
+생성 타입을 다시 내보내기만 하므로 **손으로 고치지 마세요.** 컨트롤러나 DTO 를 바꿨다면
+앱을 띄운 뒤:
+
+```bash
+pnpm --filter @litmood/api-client fetch-spec   # openapi.yaml 갱신
+pnpm --filter @litmood/api-client codegen      # src/generated 재생성
+```
+
+생성 결과는 커밋합니다. 백엔드를 띄우지 않고도 프론트가 빌드되고, 계약 변경이 diff 로
+보입니다. 커밋을 빠뜨리면 CI `OpenAPI 계약 검사`가 막습니다.
+
+**응답 DTO 의 필드는 required/nullable 을 명시합니다**
+springdoc 은 애노테이션이 없으면 모든 필드를 optional 로 뽑습니다. 그러면 생성 타입이
+`id?: number` 가 되어 호출부에 `!` 가 번지고, `rating: number | null` 이라는 정확한 정보를
+잃습니다. 응답 record 의 각 필드에 `@Schema(requiredMode = REQUIRED)` 를 붙이고, null 이
+될 수 있으면 `types = {"string", "null"}` 을 더합니다 (`nullable = true` 는 OpenAPI 3.1
+에서 무시됩니다).
 
 ## 자주 걸리는 함정
 
-| 증상                      | 원인                                                                                                |
-| ------------------------- | --------------------------------------------------------------------------------------------------- |
-| 한글 slug 라우트가 404    | Next App Router는 동적 세그먼트를 **디코딩하지 않고** 넘깁니다. `decodeRouteParam()`을 쓰세요       |
-| 무한 렌더 (React #185)    | zustand v5는 셀렉터를 참조 비교합니다. 객체를 반환하지 말고 필드별로 구독하세요                     |
-| Panda 색이 안 먹음        | 빌드 타임 정적 추출기입니다. 동적 값은 `token()`으로 조회해 인라인 스타일로 넘기세요                |
-| 타임라인 500              | `SELECT DISTINCT` + `ORDER BY`는 Postgres에서 무효입니다. 컬렉션 조인 대신 EXISTS 서브쿼리를 쓰세요 |
-| 테스트가 남의 데이터를 봄 | 테스트들이 Postgres 컨테이너 하나를 공유합니다. 콘텐츠는 테스트마다 고유 ISBN을 쓰세요              |
-| 응답에 필드가 없음        | Jackson은 `always` 로 설정돼 있습니다. `non_null`로 되돌리지 마세요 — OpenAPI 계약과 어긋납니다     |
+| 증상                                  | 원인                                                                                                                            |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| 한글 slug 라우트가 404                | Next App Router는 동적 세그먼트를 **디코딩하지 않고** 넘깁니다. `decodeRouteParam()`을 쓰세요                                   |
+| 무한 렌더 (React #185)                | zustand v5는 셀렉터를 참조 비교합니다. 객체를 반환하지 말고 필드별로 구독하세요                                                 |
+| Panda 색이 안 먹음                    | 빌드 타임 정적 추출기입니다. 동적 값은 `token()`으로 조회해 인라인 스타일로 넘기세요                                            |
+| 타임라인 500                          | `SELECT DISTINCT` + `ORDER BY`는 Postgres에서 무효입니다. 컬렉션 조인 대신 EXISTS 서브쿼리를 쓰세요                             |
+| 테스트가 남의 데이터를 봄             | 테스트들이 Postgres 컨테이너 하나를 공유합니다. 콘텐츠는 테스트마다 고유 ISBN을 쓰세요                                          |
+| 응답에 필드가 없음                    | Jackson은 `always` 로 설정돼 있습니다. `non_null`로 되돌리지 마세요 — OpenAPI 계약과 어긋납니다                                 |
+| 같은 enum 이 TS 타입 여러 개로 생성됨 | springdoc 은 enum 을 프로퍼티마다 인라인합니다. `OpenApiConfig` 의 `enumsAsRef` 로 공유 스키마가 되게 해 뒀습니다 — 끄지 마세요 |
 
 ## 테스트
 
