@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: litmood
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 10m # 아바타/커버 업로드
+spec:
+  rules:
+    - host: litmood.local # overlay 에서 실제 도메인으로 치환
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend: { service: { name: litmood-api, port: { number: 80 } } }
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: litmood-web, port: { number: 80 } } }

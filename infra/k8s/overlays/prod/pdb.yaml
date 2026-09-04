@@ -1,0 +1,18 @@
+# 노드 드레인 중에도 최소 가용 파드를 유지해 무중단을 보장한다 (docs/06-infra.md)
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: litmood-api
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels: { app: litmood-api }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: litmood-web
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app: litmood-web }

@@ -1,0 +1,11 @@
+pnpm-lock.yaml
+styled-system/
+.next/
+apps/api/
+
+# 에디터·도구가 각자 PC 에 만드는 로컬 설정 — 저장소가 관리하지 않는다
+.claude/
+
+# springdoc 이 생성한 산출물. CI(openapi-check)가 생성 결과와 바이트 단위로 비교하므로
+# prettier 가 손대면 두 검사가 서로 어긋난다.
+packages/api-client/openapi.yaml

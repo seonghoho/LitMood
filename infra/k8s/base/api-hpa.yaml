@@ -1,0 +1,21 @@
+# 검색 트래픽 스파이크는 외부 API 대기 때문에 백엔드에서 발생한다 (ADR-007).
+# 웹은 고정 replica 로 두고 API 만 스케일링한다.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: litmood-api
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: litmood-api
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: { type: Utilization, averageUtilization: 70 }
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300 # 트래픽이 출렁여도 축소는 천천히

@@ -1,0 +1,78 @@
+# 로컬 개발 인프라 (ADR-007)
+#
+# 포트는 환경변수로 오버라이드할 수 있다. 다른 프로젝트가 같은 포트를 쓰고 있다면
+# infra/docker/.env 에 POSTGRES_PORT / REDIS_PORT / MINIO_PORT 를 지정한다.
+# 애플리케이션(web/api)은 호스트에서 직접 실행한다 — 핫 리로드 속도가 컨테이너보다 빠르다.
+# 여기서는 개발자가 직접 설치하면 온보딩이 깨지는 상태 저장 서비스만 띄운다.
+name: litmood
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: litmood-postgres
+    environment:
+      POSTGRES_DB: litmood
+      POSTGRES_USER: litmood
+      POSTGRES_PASSWORD: litmood_local
+      # 한글 콘텐츠 정렬/비교를 위한 로케일
+      LANG: ko_KR.utf8
+      POSTGRES_INITDB_ARGS: '--encoding=UTF-8 --locale=C'
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U litmood -d litmood']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: litmood-redis
+    # 로컬에서는 영속화 불필요 — 캐시/토큰 저장소이므로 재시작 시 비어도 무방하다
+    command: redis-server --save '' --appendonly no --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: litmood-minio
+    command: server /data --console-address ':9001'
+    environment:
+      MINIO_ROOT_USER: litmood
+      MINIO_ROOT_PASSWORD: litmood_local
+    ports:
+      - '${MINIO_PORT:-9000}:9000' # S3 API
+      - '${MINIO_CONSOLE_PORT:-9001}:9001' # 웹 콘솔
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # 최초 기동 시 버킷 생성 후 종료되는 일회성 잡
+  minio-init:
+    image: minio/mc:latest
+    container_name: litmood-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 litmood litmood_local &&
+      mc mb --ignore-existing local/litmood &&
+      mc anonymous set download local/litmood &&
+      echo 'bucket ready'
+      "
+
+volumes:
+  postgres-data:
+  minio-data:

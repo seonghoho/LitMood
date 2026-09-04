@@ -1,0 +1,7 @@
+{
+  "extends": "@litmood/config/tsconfig",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts", "orval.config.ts"]
+}

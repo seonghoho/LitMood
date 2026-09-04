@@ -1,0 +1,1496 @@
+openapi: 3.1.0
+info:
+  title: LitMood API
+  description: 책·영화·음악을 무드와 함께 기록하고 나누는 서비스의 API
+  version: v1
+servers:
+- url: http://localhost:8080
+  description: local
+security:
+- bearerAuth: []
+tags:
+- name: Records
+  description: 기록
+- name: Discover
+  description: 탐색
+- name: Auth
+  description: 인증
+- name: Moods
+  description: 무드
+- name: System
+  description: 시스템 상태
+- name: Collections
+  description: 컬렉션
+- name: Social
+  description: 팔로우·좋아요·차단·신고
+- name: Users
+  description: 사용자
+- name: Contents
+  description: 콘텐츠 검색·조회
+paths:
+  /api/v1/users/me/avatar:
+    post:
+      tags:
+      - Users
+      summary: 아바타 업로드 URL 발급
+      description: "발급받은 uploadUrl 로 직접 PUT 한 뒤, publicUrl 을 PATCH /users/me 로 저장한\
+        다"
+      operationId: issueAvatarUpload
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AvatarUploadRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AvatarUploadResponse"
+  /api/v1/users/@{handle}/follow:
+    post:
+      tags:
+      - Social
+      summary: 팔로우
+      description: 비대칭 관계 — 승인이 필요 없다. 이미 팔로우 중이면 멱등하게 성공한다.
+      operationId: follow
+      parameters:
+      - name: handle
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+    delete:
+      tags:
+      - Social
+      summary: 언팔로우
+      operationId: unfollow
+      parameters:
+      - name: handle
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+  /api/v1/users/@{handle}/block:
+    post:
+      tags:
+      - Social
+      summary: 차단
+      description: 양방향으로 가려지며 기존 팔로우 관계는 양쪽 모두 해제된다
+      operationId: block
+      parameters:
+      - name: handle
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+    delete:
+      tags:
+      - Social
+      summary: 차단 해제
+      operationId: unblock
+      parameters:
+      - name: handle
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+  /api/v1/reports:
+    post:
+      tags:
+      - Social
+      summary: 신고
+      description: 같은 대상을 반복 신고해도 한 번만 접수된다
+      operationId: report
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+  /api/v1/records:
+    post:
+      tags:
+      - Records
+      summary: 기록 생성
+      description: 콘텐츠가 자체 DB 에 없으면 provider 에서 가져와 스냅샷을 만든다. 필수 입력은 status 뿐이다.
+      operationId: create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRecordRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RecordResponse"
+  /api/v1/records/{id}/like:
+    post:
+      tags:
+      - Social
+      summary: 기록 좋아요
+      operationId: likeRecord
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/LikeResponse"
+    delete:
+      tags:
+      - Social
+      summary: 기록 좋아요 취소
+      operationId: unlikeRecord
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/LikeResponse"
+  /api/v1/collections:
+    post:
+      tags:
+      - Collections
+      summary: 컬렉션 생성
+      description: 제목에서 공유용 slug 를 만든다
+      operationId: create_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCollectionRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CollectionResponse"
+  /api/v1/collections/{slug}/like:
+    post:
+      tags:
+      - Social
+      summary: 컬렉션 좋아요
+      operationId: likeCollection
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/LikeResponse"
+    delete:
+      tags:
+      - Social
+      summary: 컬렉션 좋아요 취소
+      operationId: unlikeCollection
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/LikeResponse"
+  /api/v1/collections/{slug}/items:
+    post:
+      tags:
+      - Collections
+      summary: 콘텐츠 추가
+      description: 기록하지 않은 콘텐츠도 담을 수 있다
+      operationId: addItem
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddCollectionItemRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CollectionResponse"
+  /api/v1/auth/signup:
+    post:
+      tags:
+      - Auth
+      summary: 이메일 회원가입
+      operationId: signup
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+      security: []
+  /api/v1/auth/refresh:
+    post:
+      tags:
+      - Auth
+      summary: 액세스 토큰 재발급
+      description: refresh 토큰을 회전시킨다
+      operationId: refresh
+      parameters:
+      - name: refresh_token
+        in: cookie
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+      security: []
+  /api/v1/auth/logout:
+    post:
+      tags:
+      - Auth
+      summary: 로그아웃
+      operationId: logout
+      parameters:
+      - name: refresh_token
+        in: cookie
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+      security: []
+  /api/v1/auth/login:
+    post:
+      tags:
+      - Auth
+      summary: 이메일 로그인
+      operationId: login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+      security: []
+  /api/v1/users/me:
+    get:
+      tags:
+      - Users
+      summary: 내 정보 조회
+      operationId: me
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MyProfile"
+    patch:
+      tags:
+      - Users
+      summary: 프로필 수정
+      description: 넣지 않은 필드는 변경되지 않는다. 핸들은 바꿀 수 없다
+      operationId: updateProfile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MyProfile"
+  /api/v1/records/{id}:
+    get:
+      tags:
+      - Records
+      summary: 기록 단건 조회
+      description: 공개 범위를 벗어나면 404 로 응답한다
+      operationId: get
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RecordResponse"
+    delete:
+      tags:
+      - Records
+      summary: 기록 삭제
+      description: soft delete
+      operationId: delete
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+    patch:
+      tags:
+      - Records
+      summary: 기록 수정
+      operationId: update
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRecordRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RecordResponse"
+  /api/v1/collections/{slug}:
+    get:
+      tags:
+      - Collections
+      summary: 컬렉션 조회
+      description: 공개 범위를 벗어나면 404 로 응답한다
+      operationId: get_1
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CollectionResponse"
+    delete:
+      tags:
+      - Collections
+      summary: 컬렉션 삭제
+      operationId: delete_1
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+    patch:
+      tags:
+      - Collections
+      summary: 컬렉션 수정
+      operationId: update_1
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCollectionRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CollectionResponse"
+  /api/v1/collections/{slug}/items/order:
+    patch:
+      tags:
+      - Collections
+      summary: 순서 일괄 변경
+      description: 큐레이션에서 순서는 의미다
+      operationId: reorder
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReorderItemsRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CollectionResponse"
+  /api/v1/users/@{handle}:
+    get:
+      tags:
+      - Users
+      summary: 공개 프로필 조회
+      operationId: profile
+      parameters:
+      - name: handle
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PublicProfile"
+      security: []
+  /api/v1/users/@{handle}/records:
+    get:
+      tags:
+      - Users
+      summary: 공개 기록 목록
+      description: PUBLIC 기록만 노출한다
+      operationId: publicRecords
+      parameters:
+      - name: handle
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: types
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - BOOK
+            - MOVIE
+            - MUSIC
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RecordPage"
+      security: []
+  /api/v1/users/@{handle}/collections:
+    get:
+      tags:
+      - Users
+      summary: 공개 컬렉션 목록
+      description: 본인이 조회하면 비공개 컬렉션도 포함된다
+      operationId: collections
+      parameters:
+      - name: handle
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CollectionSummary"
+      security: []
+  /api/v1/records/me:
+    get:
+      tags:
+      - Records
+      summary: 내 타임라인
+      description: 커서 기반 페이지네이션
+      operationId: myTimeline
+      parameters:
+      - name: types
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - BOOK
+            - MOVIE
+            - MUSIC
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - WANT
+            - DOING
+            - DONE
+            - DROPPED
+      - name: moods
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: minRating
+        in: query
+        required: false
+        schema:
+          type: number
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RecordPage"
+  /api/v1/records/feed:
+    get:
+      tags:
+      - Records
+      summary: 팔로잉 피드
+      description: 팔로우한 사용자들의 공개·팔로워 공개 기록. 차단한 사용자는 제외된다.
+      operationId: feed
+      parameters:
+      - name: types
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - BOOK
+            - MOVIE
+            - MUSIC
+      - name: moods
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RecordPage"
+  /api/v1/ping:
+    get:
+      tags:
+      - System
+      summary: 헬스 체크
+      description: 애플리케이션 기동 여부를 확인한다
+      operationId: ping
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties: {}
+      security: []
+  /api/v1/moods:
+    get:
+      tags:
+      - Moods
+      summary: 무드 목록
+      description: "큐레이션 무드 우선, 그다음 사용량순"
+      operationId: list
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 30
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MoodTag"
+      security: []
+  /api/v1/moods/{name}/contents:
+    get:
+      tags:
+      - Moods
+      summary: 무드별 콘텐츠 랭킹
+      description: 해당 무드로 기록된 공개 기록 수 기준. 이름은 정규화되어 비교된다.
+      operationId: contentsByMood
+      parameters:
+      - name: name
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MoodDiscovery"
+      security: []
+  /api/v1/discover/popular:
+    get:
+      tags:
+      - Discover
+      summary: 인기 콘텐츠
+      description: 기간 내 기록 수 기준. Redis Sorted Set 으로 집계한다.
+      operationId: popular
+      parameters:
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+          default: week
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContentRef"
+      security: []
+  /api/v1/contents/search:
+    get:
+      tags:
+      - Contents
+      summary: 통합 검색
+      description: 책·영화·음악을 동시에 검색한다. 일부 provider 가 실패해도 나머지 결과를 반환한다.
+      operationId: search
+      parameters:
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+          maxLength: 100
+          minLength: 0
+      - name: types
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - BOOK
+            - MOVIE
+            - MUSIC
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SearchResponse"
+      security: []
+  /api/v1/collections/{slug}/items/{contentId}:
+    delete:
+      tags:
+      - Collections
+      summary: 콘텐츠 제거
+      operationId: removeItem
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: contentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CollectionResponse"
+components:
+  schemas:
+    AvatarUploadRequest:
+      type: object
+      properties:
+        contentType:
+          type: string
+        contentLength:
+          type: integer
+          format: int64
+      required:
+      - contentLength
+      - contentType
+    AvatarUploadResponse:
+      type: object
+      description: uploadUrl 로 PUT 한 뒤 publicUrl 을 PATCH /users/me 에 저장한다
+      properties:
+        uploadUrl:
+          type: string
+        publicUrl:
+          type: string
+    ReportRequest:
+      type: object
+      properties:
+        targetType:
+          type: string
+          enum:
+          - RECORD
+          - COLLECTION
+          - USER
+        targetId:
+          type: integer
+          format: int64
+        reason:
+          type: string
+          enum:
+          - SPAM
+          - ABUSE
+          - SEXUAL
+          - SPOILER
+          - COPYRIGHT
+          - OTHER
+        detail:
+          type: string
+          maxLength: 500
+          minLength: 0
+      required:
+      - reason
+      - targetId
+      - targetType
+    CreateRecordRequest:
+      type: object
+      properties:
+        provider:
+          type: string
+          enum:
+          - NAVER_BOOK
+          - TMDB
+          - SPOTIFY
+        externalId:
+          type: string
+        status:
+          type: string
+          enum:
+          - WANT
+          - DOING
+          - DONE
+          - DROPPED
+        rating:
+          type: number
+          maximum: 5.0
+          minimum: 0.5
+        moods:
+          type: array
+          items:
+            type: string
+            maxLength: 30
+            minLength: 0
+          maxItems: 5
+          minItems: 0
+        review:
+          type: string
+          maxLength: 2000
+          minLength: 0
+        isSpoiler:
+          type: boolean
+        visibility:
+          type: string
+          enum:
+          - PUBLIC
+          - FOLLOWERS
+          - PRIVATE
+        contextNote:
+          type: string
+          maxLength: 200
+          minLength: 0
+        startedAt:
+          type: string
+          format: date
+        finishedAt:
+          type: string
+          format: date
+        repeatCount:
+          type: integer
+          format: int32
+      required:
+      - externalId
+      - provider
+      - status
+    ContentRef:
+      type: object
+      description: 기록에 붙는 콘텐츠 요약
+      properties:
+        id:
+          type: integer
+          format: int64
+        type:
+          type: string
+          enum:
+          - BOOK
+          - MOVIE
+          - MUSIC
+        provider:
+          type: string
+          enum:
+          - NAVER_BOOK
+          - TMDB
+          - SPOTIFY
+        externalId:
+          type: string
+        title:
+          type: string
+        creators:
+          type: array
+          items:
+            type: string
+        releasedOn:
+          type: string
+          format: date
+        coverUrl:
+          type: string
+    MoodTag:
+      type: object
+      properties:
+        name:
+          type: string
+        displayName:
+          type: string
+        color:
+          type: string
+        curated:
+          type: boolean
+    RecordResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum:
+          - WANT
+          - DOING
+          - DONE
+          - DROPPED
+        rating:
+          type: number
+        moods:
+          type: array
+          items:
+            $ref: "#/components/schemas/MoodTag"
+        review:
+          type: string
+        isSpoiler:
+          type: boolean
+        visibility:
+          type: string
+          enum:
+          - PUBLIC
+          - FOLLOWERS
+          - PRIVATE
+        contextNote:
+          type: string
+        startedAt:
+          type: string
+          format: date
+        finishedAt:
+          type: string
+          format: date
+        repeatCount:
+          type: integer
+          format: int32
+        likeCount:
+          type: integer
+          format: int32
+        likedByMe:
+          type: boolean
+        authorHandle:
+          type: string
+        authorNickname:
+          type: string
+        content:
+          $ref: "#/components/schemas/ContentRef"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    LikeResponse:
+      type: object
+      properties:
+        likeCount:
+          type: integer
+          format: int32
+        likedByMe:
+          type: boolean
+    CreateCollectionRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 100
+          minLength: 0
+        description:
+          type: string
+          maxLength: 500
+          minLength: 0
+        visibility:
+          type: string
+          enum:
+          - PUBLIC
+          - FOLLOWERS
+          - PRIVATE
+      required:
+      - title
+    CollectionItemResponse:
+      type: object
+      properties:
+        content:
+          $ref: "#/components/schemas/ContentRef"
+        position:
+          type: integer
+          format: int32
+        note:
+          type: string
+    CollectionResponse:
+      type: object
+      properties:
+        slug:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        coverUrl:
+          type: string
+        visibility:
+          type: string
+          enum:
+          - PUBLIC
+          - FOLLOWERS
+          - PRIVATE
+        itemCount:
+          type: integer
+          format: int32
+        ownerHandle:
+          type: string
+        ownerNickname:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CollectionItemResponse"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    AddCollectionItemRequest:
+      type: object
+      properties:
+        provider:
+          type: string
+          enum:
+          - NAVER_BOOK
+          - TMDB
+          - SPOTIFY
+        externalId:
+          type: string
+        note:
+          type: string
+          maxLength: 300
+          minLength: 0
+      required:
+      - externalId
+      - provider
+    SignupRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+          maxLength: 72
+          minLength: 8
+        handle:
+          type: string
+          pattern: "^[a-zA-Z0-9_]{3,30}$"
+        nickname:
+          type: string
+          maxLength: 50
+          minLength: 0
+      required:
+      - email
+      - handle
+      - nickname
+      - password
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        expiresIn:
+          type: integer
+          format: int64
+        user:
+          $ref: "#/components/schemas/UserSummary"
+    UserSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        handle:
+          type: string
+        nickname:
+          type: string
+        avatarUrl:
+          type: string
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+      - email
+      - password
+    UpdateProfileRequest:
+      type: object
+      properties:
+        nickname:
+          type: string
+          maxLength: 50
+          minLength: 1
+        bio:
+          type: string
+          maxLength: 200
+          minLength: 0
+        defaultVisibility:
+          type: string
+          enum:
+          - PUBLIC
+          - FOLLOWERS
+          - PRIVATE
+        avatarUrl:
+          type: string
+    MyProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        email:
+          type: string
+        handle:
+          type: string
+        nickname:
+          type: string
+        bio:
+          type: string
+        avatarUrl:
+          type: string
+        defaultVisibility:
+          type: string
+          enum:
+          - PUBLIC
+          - FOLLOWERS
+          - PRIVATE
+    UpdateRecordRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+          - WANT
+          - DOING
+          - DONE
+          - DROPPED
+        rating:
+          type: number
+          maximum: 5.0
+          minimum: 0.5
+        moods:
+          type: array
+          items:
+            type: string
+            maxLength: 30
+            minLength: 0
+          maxItems: 5
+          minItems: 0
+        review:
+          type: string
+          maxLength: 2000
+          minLength: 0
+        isSpoiler:
+          type: boolean
+        visibility:
+          type: string
+          enum:
+          - PUBLIC
+          - FOLLOWERS
+          - PRIVATE
+        contextNote:
+          type: string
+          maxLength: 200
+          minLength: 0
+        startedAt:
+          type: string
+          format: date
+        finishedAt:
+          type: string
+          format: date
+        repeatCount:
+          type: integer
+          format: int32
+    UpdateCollectionRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 100
+          minLength: 0
+        description:
+          type: string
+          maxLength: 500
+          minLength: 0
+        coverUrl:
+          type: string
+        visibility:
+          type: string
+          enum:
+          - PUBLIC
+          - FOLLOWERS
+          - PRIVATE
+    ReorderItemsRequest:
+      type: object
+      description: 전달된 순서대로 position 을 다시 매긴다
+      properties:
+        contentIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+      required:
+      - contentIds
+    PublicProfile:
+      type: object
+      properties:
+        handle:
+          type: string
+        nickname:
+          type: string
+        bio:
+          type: string
+        avatarUrl:
+          type: string
+        followers:
+          type: integer
+          format: int64
+        following:
+          type: integer
+          format: int64
+        followedByMe:
+          type: boolean
+    RecordPage:
+      type: object
+      description: 커서 기반 페이지. nextCursor 가 null 이면 마지막 페이지다.
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecordResponse"
+        nextCursor:
+          type: string
+        totalCount:
+          type: integer
+          format: int64
+    CollectionSummary:
+      type: object
+      description: 목록용 — 아이템 없이 개수만
+      properties:
+        slug:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        coverUrl:
+          type: string
+        visibility:
+          type: string
+          enum:
+          - PUBLIC
+          - FOLLOWERS
+          - PRIVATE
+        itemCount:
+          type: integer
+          format: int32
+        createdAt:
+          type: string
+          format: date-time
+    MoodDiscovery:
+      type: object
+      properties:
+        mood:
+          $ref: "#/components/schemas/MoodTag"
+        contents:
+          type: array
+          items:
+            $ref: "#/components/schemas/RankedContent"
+    RankedContent:
+      type: object
+      properties:
+        content:
+          $ref: "#/components/schemas/ContentRef"
+        recordCount:
+          type: integer
+          format: int64
+        averageRating:
+          type: number
+          format: double
+    ContentSummary:
+      type: object
+      description: 정규화된 콘텐츠. provider 차이는 서버가 흡수한다.
+      properties:
+        type:
+          type: string
+          enum:
+          - BOOK
+          - MOVIE
+          - MUSIC
+        provider:
+          type: string
+          enum:
+          - NAVER_BOOK
+          - TMDB
+          - SPOTIFY
+        externalId:
+          type: string
+        title:
+          type: string
+        creators:
+          type: array
+          items:
+            type: string
+        releasedOn:
+          type: string
+          format: date
+        coverUrl:
+          type: string
+        description:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: {}
+    SearchResponse:
+      type: object
+      description: 부분 실패를 허용한다. 실패한 provider 는 failedProviders 로 알린다 (NFR-03).
+      properties:
+        results:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: "#/components/schemas/ContentSummary"
+        failedProviders:
+          type: array
+          items:
+            type: string
+            enum:
+            - NAVER_BOOK
+            - TMDB
+            - SPOTIFY
+        cached:
+          type: boolean
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
