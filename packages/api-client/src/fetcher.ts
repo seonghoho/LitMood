@@ -37,7 +37,21 @@ const BASE_URL =
   process.env.API_INTERNAL_BASE_URL ??
   'http://localhost:8080'
 
-export const apiFetcher = async <T>(url: string, init?: RequestInit): Promise<T> => {
+/**
+ * orval 이 생성한 호출 함수는 본문뿐 아니라 상태 코드와 헤더까지 함께 받는
+ * `{ data, status, headers }` 형태를 기대한다. 본문만 돌려주면 호출부의
+ * `const { data } = await get(...)` 이 undefined 를 집는다.
+ */
+export interface ApiResult<T> {
+  data: T
+  status: number
+  headers: Headers
+}
+
+export const apiFetcher = async <T extends ApiResult<unknown>>(
+  url: string,
+  init?: RequestInit,
+): Promise<T> => {
   const headers = new Headers(init?.headers)
   headers.set('Accept', 'application/json')
   if (init?.body && !headers.has('Content-Type')) {
@@ -65,8 +79,7 @@ export const apiFetcher = async <T>(url: string, init?: RequestInit): Promise<T>
     )
   }
 
-  if (response.status === 204) {
-    return undefined as T
-  }
-  return (await response.json()) as T
+  // 204 는 본문이 없다. json() 을 부르면 파싱 에러가 난다.
+  const data = response.status === 204 ? undefined : await response.json()
+  return { data, status: response.status, headers: response.headers } as T
 }
