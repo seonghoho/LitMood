@@ -21,7 +21,12 @@
 | M5 운영 준비          | ⬜   | — ([09-milestone-5.md](09-milestone-5.md)) |
 
 **동작하는 것**: 가입 → 검색 → 기록 → 타임라인 → 공개 프로필 → 컬렉션 공유(OG 이미지) →
-무드 탐색 → 팔로우 → 피드 → 좋아요. 백엔드 테스트 74건 통과.
+무드 탐색 → 팔로우 → 피드 → 좋아요.
+
+**API 계약 파이프라인이 이어졌습니다** (ADR-008, [#4](https://github.com/seonghoho/LitMood/issues/4)).
+프론트의 모델 타입은 이제 백엔드 DTO 에서 생성됩니다 — `features/*/types.ts` 는 재수출일 뿐이니
+손으로 고치지 마세요. 호출 코드까지 옮기는 일은 [#15](https://github.com/seonghoho/LitMood/issues/15)
+로 남아 있습니다.
 
 **미완**: [GitHub Issues](https://github.com/seonghoho/LitMood/issues) 9건에 상세히 적어 두었습니다.
 아래 3절을 보세요.
@@ -165,6 +170,23 @@ pnpm verify            # typecheck + lint + format + build + 백엔드 테스트
 같은 함정을 다시 밟지 않도록 [CLAUDE.md](../CLAUDE.md)의 "자주 걸리는 함정" 표를 보세요.
 전부 실제로 터졌던 것들입니다.
 
+### 스펙이 계약을 다 말하지 않으면 코드젠은 손해다
+
+#4 에서 배운 것입니다. springdoc 은 애노테이션이 없으면 **모든 프로퍼티를 optional 로** 뽑습니다.
+그 스펙으로 타입을 생성하면 `rating: number | null` 이 `rating?: number` 가 되어, 손으로 쓴
+타입이 이미 갖고 있던 정보를 오히려 잃습니다. 그래서 응답 DTO 에 `required`/`nullable` 을 먼저
+명시했습니다 — 구체적인 규칙은 [CLAUDE.md](../CLAUDE.md)에 있습니다.
+
+두 가지가 특히 시간을 먹었습니다.
+
+- **`@Schema(nullable = true)` 는 OpenAPI 3.1 에서 아무 일도 하지 않습니다.** 유효한 키워드가
+  아니라 springdoc 이 조용히 버립니다. 3.1 표기는 `types = {"string", "null"}` 처럼 `type` 을
+  배열로 주는 것입니다. **애노테이션을 대량으로 붙이기 전에 한두 필드로 먼저 확인하세요** —
+  100개를 붙이고 나서 안 먹는 걸 알면 되돌리는 비용이 큽니다.
+- **`ModelResolver` 빈을 직접 만들면 스키마가 망가집니다.** enum 을 공유 스키마로 내보내려고
+  빈을 대체했더니 springdoc 이 자기 ObjectMapper 로 구성해 둔 리졸버가 밀려나 `type: object` 가
+  31개에서 4개로 줄었습니다. `OpenApiConfig` 처럼 `@PostConstruct` 로 플래그만 켜세요.
+
 ### 캐싱과 개인화의 경계
 
 공개 페이지(`/@handle`, `/collections/[slug]`)는 SEO 를 위해 캐시되고, **그 서버 렌더링은 인증 없이**
@@ -181,7 +203,6 @@ pnpm verify            # typecheck + lint + format + build + 백엔드 테스트
 - **실제 외부 API 로는 검증하지 않았습니다.** 네이버·TMDB·Spotify 모두 스텁으로만 확인했습니다.
   응답 형태는 문서를 보고 맞췄지만, 실제 키를 넣었을 때 예외가 나올 수 있습니다
 - **K8s 매니페스트는 `kustomize build` 로 문법만 검증했습니다.** 실제 클러스터에 배포한 적 없습니다
-- **CI 워크플로는 실행된 적이 없습니다.** 브랜치가 아직 푸시되지 않았습니다
 - **프론트엔드 테스트는 순수 로직만 있습니다.** jsdom·testing-library 가 없어 컴포넌트 렌더링은
   검증하지 못하고 브라우저로 수동 확인합니다 ([이슈 #9](https://github.com/seonghoho/LitMood/issues/9))
 - **아바타 업로드는 로컬 MinIO 로만 검증했습니다.** 실제 S3 나 프로덕션 버킷 정책은 확인하지 않았습니다
