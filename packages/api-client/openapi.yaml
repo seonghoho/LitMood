@@ -1331,6 +1331,12 @@ components:
         finishedAt:
           type: string
           format: date
+        clearStartedAt:
+          type: boolean
+          description: true 면 시작일을 지운다. startedAt 을 함께 주면 새 값이 이긴다
+        clearFinishedAt:
+          type: boolean
+          description: true 면 종료일을 지운다. finishedAt 을 함께 주면 새 값이 이긴다
         repeatCount:
           type: integer
           format: int32
