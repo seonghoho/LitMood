@@ -21,6 +21,9 @@ public interface RecordRepository {
      */
     List<Record> findActiveByUserAndContents(Long userId, List<Long> contentIds);
 
+    /** 여러 기록을 한 번에. 삭제된 것도 포함한다 (신고 큐 #28). */
+    List<Record> findAllByIds(List<Long> ids);
+
     /** 커서 기반 타임라인 조회 (F-04-01·02). */
     List<Record> findTimeline(RecordQuery query);
 

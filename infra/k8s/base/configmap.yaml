@@ -4,6 +4,9 @@ metadata:
   name: litmood-api-config
 data:
   CORS_ALLOWED_ORIGINS: 'https://litmood.local'
+  # 신고 처리 화면에 들어갈 수 있는 계정의 handle (#28). 쉼표로 구분한다.
+  # 시크릿이 아니라 운영 설정이라 ConfigMap 에 둔다 — 권한은 배포로 바뀐다.
+  ADMIN_HANDLES: ''
 ---
 apiVersion: v1
 kind: ConfigMap

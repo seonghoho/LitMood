@@ -65,6 +65,16 @@ export function NavBar() {
             >
               {user.nickname}
             </Link>
+            {/* 운영 화면은 운영자에게만 보인다 (#28) */}
+            {user.admin && (
+              <Link
+                href="/admin/reports"
+                aria-current={pathname.startsWith('/admin') ? 'page' : undefined}
+                className={css({ textStyle: 'caption', color: 'fg.muted' })}
+              >
+                신고
+              </Link>
+            )}
             <Link
               href="/settings"
               aria-current={pathname === '/settings' ? 'page' : undefined}

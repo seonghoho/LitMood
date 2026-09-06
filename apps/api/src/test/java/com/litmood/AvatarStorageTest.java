@@ -16,7 +16,12 @@ class AvatarStorageTest {
 
     private static S3AvatarStorage storageWith(String accessKey, String secretKey) {
         return new S3AvatarStorage(new LitmoodProperties(
-                null, null, null, new LitmoodProperties.Storage("http://localhost:9000", "litmood", accessKey, secretKey), null));
+                null,
+                null,
+                null,
+                new LitmoodProperties.Storage("http://localhost:9000", "litmood", accessKey, secretKey),
+                null,
+                null));
     }
 
     @Test

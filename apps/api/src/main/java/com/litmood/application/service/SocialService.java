@@ -15,6 +15,7 @@ import com.litmood.domain.repository.ReportRepository;
 import com.litmood.domain.repository.SocialRepository;
 import com.litmood.domain.repository.UserRepository;
 import com.litmood.interfaces.dto.SocialDtos.BlockedUserResponse;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.util.List;
 import java.util.Set;
 import org.springframework.stereotype.Service;
@@ -32,18 +33,21 @@ public class SocialService {
     private final RecordRepository recordRepository;
     private final CollectionRepository collectionRepository;
     private final ReportRepository reportRepository;
+    private final MeterRegistry meterRegistry;
 
     public SocialService(
             SocialRepository socialRepository,
             UserRepository userRepository,
             RecordRepository recordRepository,
             CollectionRepository collectionRepository,
-            ReportRepository reportRepository) {
+            ReportRepository reportRepository,
+            MeterRegistry meterRegistry) {
         this.socialRepository = socialRepository;
         this.userRepository = userRepository;
         this.recordRepository = recordRepository;
         this.collectionRepository = collectionRepository;
         this.reportRepository = reportRepository;
+        this.meterRegistry = meterRegistry;
     }
 
     // ── 팔로우 ──────────────────────────────────────────────
@@ -190,6 +194,12 @@ public class SocialService {
             return;
         }
         reportRepository.save(Report.of(reporterId, targetType, targetId, reason, detail));
+
+        // NFR-07 — 접수량이 급증하면 큐를 열어보기 전에 알아야 한다 (M5-4).
+        //   중복 신고는 위에서 걸러졌으므로, 이 카운터는 실제로 큐에 쌓인 건수다.
+        meterRegistry
+                .counter("litmood.reports.received", "target", targetType.name(), "reason", reason.name())
+                .increment();
     }
 
     // ── 조회 보조 ───────────────────────────────────────────

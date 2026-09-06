@@ -15,5 +15,8 @@ public interface CollectionRepository {
 
     List<Collection> findByOwner(Long userId, List<com.litmood.domain.model.Visibility> visibleTo, int limit);
 
+    /** 여러 컬렉션을 한 번에. 삭제된 것도 포함한다 (신고 큐 #28). */
+    List<Collection> findAllByIds(List<Long> ids);
+
     boolean existsBySlug(String slug);
 }

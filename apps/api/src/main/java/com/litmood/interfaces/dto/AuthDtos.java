@@ -43,9 +43,12 @@ public final class AuthDtos {
             @Schema(requiredMode = REQUIRED) Long id,
             @Schema(requiredMode = REQUIRED) String handle,
             @Schema(requiredMode = REQUIRED) String nickname,
-            @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String avatarUrl) {
-        public static UserSummary from(User user) {
-            return new UserSummary(user.getId(), user.getHandle(), user.getNickname(), user.getAvatarUrl());
+            @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String avatarUrl,
+            @Schema(requiredMode = REQUIRED, description = "운영자 여부 (#28). 운영 화면 진입 여부를 화면이 판단하는 근거다")
+                    boolean admin) {
+        public static UserSummary from(User user, boolean admin) {
+            return new UserSummary(
+                    user.getId(), user.getHandle(), user.getNickname(), user.getAvatarUrl(), admin);
         }
     }
 }

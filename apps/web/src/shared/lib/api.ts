@@ -1,5 +1,5 @@
 import { ApiError, type ProblemDetail } from '@litmood/api-client'
-import { useAuthStore } from '@/shared/store/auth'
+import { useAuthStore, type CurrentUser } from '@/shared/store/auth'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080'
 
@@ -61,20 +61,13 @@ export async function tryRefresh(): Promise<boolean> {
       useAuthStore.getState().signOut()
       return false
     }
-    const data = (await response.json()) as { accessToken: string; user: CurrentUserPayload }
+    const data = (await response.json()) as { accessToken: string; user: CurrentUser }
     useAuthStore.getState().signIn(data.accessToken, data.user)
     return true
   } catch {
     useAuthStore.getState().signOut()
     return false
   }
-}
-
-interface CurrentUserPayload {
-  id: number
-  handle: string
-  nickname: string
-  avatarUrl: string | null
 }
 
 export const apiGet = <T>(path: string, init?: RequestInit) =>

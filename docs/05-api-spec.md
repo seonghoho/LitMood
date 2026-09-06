@@ -173,24 +173,46 @@
 
 ---
 
+## Admin — 운영
+
+운영자만 접근한다. **운영자가 아니면 403 이 아니라 404** 다 — 403 은 관리자 화면이
+존재한다는 사실을 알려준다.
+
+| Method | Path                  | 설명                                  | 인증      |
+| ------ | --------------------- | ------------------------------------- | --------- |
+| GET    | `/admin/reports`      | 신고 큐 (`status`, `cursor`, `limit`) | ✅ 운영자 |
+| PATCH  | `/admin/reports/{id}` | 처리 (`REVIEWED` / `DISMISSED`)       | ✅ 운영자 |
+
+**운영자 임명은 환경변수** `ADMIN_HANDLES` 의 핸들 목록이다 (쉼표 구분, 대소문자 구분).
+`users` 테이블에 권한 컬럼을 두지 않아 DB 직접 수정 없이 배포로 바뀌고, 시크릿과 같은
+경로로 관리된다. 대신 부여·회수에 재배포가 필요하고, 회수는 이미 발급된 access 토큰이
+만료된 뒤(기본 15분) 적용된다. 운영자가 늘어 이력이 필요해지면 별도 테이블로 옮긴다.
+
+목록은 **신고 건별**로 평면이다. 같은 대상의 신고를 묶지 않는 대신 각 항목이
+`sameTargetCount` 로 "이 대상에 몇 건이 쌓였는가" 를 알려준다. 신고는 한 번만 처리되며,
+이미 처리된 건을 다시 바꾸려 하면 409 다.
+
+---
+
 ## 공통 규약
 
 **커서 형식**: `base64({ "id": <lastId>, "ts": "<lastCreatedAt>" })` — 불투명 문자열. 클라이언트는 파싱하지 않는다.
 
 **에러 코드 카탈로그**
 
-| code                   | status | 상황                                                     |
-| ---------------------- | ------ | -------------------------------------------------------- |
-| `VALIDATION_FAILED`    | 400    | 요청 검증 실패 (`errors[]`에 필드별 사유)                |
-| `RATING_NOT_ALLOWED`   | 400    | `status=WANT`에 별점 부여 시도                           |
-| `MOOD_LIMIT_EXCEEDED`  | 400    | 무드 6개 이상                                            |
-| `UNAUTHORIZED`         | 401    | 토큰 없음/만료                                           |
-| `TOKEN_REUSE_DETECTED` | 401    | refresh 재사용 감지 → 전 세션 무효화됨                   |
-| `FORBIDDEN`            | 403    | 소유자 아님 / 공개범위 위반                              |
-| `NOT_FOUND`            | 404    |                                                          |
-| `RECORD_DUPLICATE`     | 409    | 동일 콘텐츠 기록 존재                                    |
-| `HANDLE_TAKEN`         | 409    | 핸들 중복                                                |
-| `PROVIDER_UNAVAILABLE` | 502    | 외부 API 전체 실패 (부분 실패는 200 + `failedProviders`) |
-| `RATE_LIMITED`         | 429    |                                                          |
+| code                      | status | 상황                                                     |
+| ------------------------- | ------ | -------------------------------------------------------- |
+| `VALIDATION_FAILED`       | 400    | 요청 검증 실패 (`errors[]`에 필드별 사유)                |
+| `RATING_NOT_ALLOWED`      | 400    | `status=WANT`에 별점 부여 시도                           |
+| `MOOD_LIMIT_EXCEEDED`     | 400    | 무드 6개 이상                                            |
+| `UNAUTHORIZED`            | 401    | 토큰 없음/만료                                           |
+| `TOKEN_REUSE_DETECTED`    | 401    | refresh 재사용 감지 → 전 세션 무효화됨                   |
+| `FORBIDDEN`               | 403    | 소유자 아님 / 공개범위 위반                              |
+| `NOT_FOUND`               | 404    |                                                          |
+| `RECORD_DUPLICATE`        | 409    | 동일 콘텐츠 기록 존재                                    |
+| `HANDLE_TAKEN`            | 409    | 핸들 중복                                                |
+| `REPORT_ALREADY_RESOLVED` | 409    | 이미 처리된 신고를 다시 처리 시도                        |
+| `PROVIDER_UNAVAILABLE`    | 502    | 외부 API 전체 실패 (부분 실패는 200 + `failedProviders`) |
+| `RATE_LIMITED`            | 429    |                                                          |
 
 **Rate Limit**: 인증 사용자 600 req/min, 비인증 60 req/min, 검색 30 req/min (Redis 토큰 버킷)

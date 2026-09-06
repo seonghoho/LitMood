@@ -21,6 +21,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint, AccessDeniedHandler {
 
+    private static final String ADMIN_PATH_PREFIX = "/api/v1/admin/";
+
     private final ObjectMapper objectMapper;
 
     public RestAuthenticationEntryPoint(ObjectMapper objectMapper) {
@@ -40,7 +42,18 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint, A
             throws IOException {
         // 인증은 됐지만 권한이 없는 경우와, 아예 익명인 경우를 구분한다
         boolean anonymous = request.getHeader("Authorization") == null;
-        write(request, response, anonymous ? ErrorCode.UNAUTHORIZED : ErrorCode.FORBIDDEN);
+        if (anonymous) {
+            write(request, response, ErrorCode.UNAUTHORIZED);
+            return;
+        }
+        // 운영 화면은 존재 자체를 감춘다 (#28). 403 이면 "여기 관리자 화면이 있다"를
+        // 알려주는 셈이라, 저장소 규칙대로 404 로 응답한다.
+        write(request, response, isAdminPath(request) ? ErrorCode.NOT_FOUND : ErrorCode.FORBIDDEN);
+    }
+
+    private boolean isAdminPath(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path != null && path.startsWith(ADMIN_PATH_PREFIX);
     }
 
     private void write(HttpServletRequest request, HttpServletResponse response, ErrorCode code)

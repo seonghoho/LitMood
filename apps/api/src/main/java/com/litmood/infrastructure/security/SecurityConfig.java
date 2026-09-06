@@ -62,6 +62,10 @@ public class SecurityConfig {
                         // "/api/v1/records/me" 까지 열리는 사고를 막는다.
                         .requestMatchers(HttpMethod.GET, "/api/v1/records/{id:[0-9]+}")
                         .permitAll()
+                        // 운영 화면 (#28). 판정 근거는 AdminHandles — 환경변수의 핸들 목록이다.
+                        // 여기서 막는 것이 유일한 관문이므로, 컨트롤러에 다시 검사를 두지 않는다.
+                        .requestMatchers("/api/v1/admin/**")
+                        .hasRole("ADMIN")
                         .anyRequest()
                         .authenticated());
 

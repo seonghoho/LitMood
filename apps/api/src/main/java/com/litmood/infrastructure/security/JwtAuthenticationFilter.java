@@ -28,9 +28,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtTokenProvider tokenProvider;
+    private final AdminHandles adminHandles;
 
-    public JwtAuthenticationFilter(JwtTokenProvider tokenProvider) {
+    public JwtAuthenticationFilter(JwtTokenProvider tokenProvider, AdminHandles adminHandles) {
         this.tokenProvider = tokenProvider;
+        this.adminHandles = adminHandles;
     }
 
     @Override
@@ -44,11 +46,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
                 Claims claims = tokenProvider.parse(token);
-                AuthPrincipal principal =
-                        new AuthPrincipal(tokenProvider.userIdOf(claims), tokenProvider.handleOf(claims));
+                String handle = tokenProvider.handleOf(claims);
+                // 운영자 여부는 토큰이 아니라 설정에서 온다 (#28).
+                //   토큰에 넣으면 권한을 회수해도 남은 토큰이 refresh TTL(2주) 동안 살아 있다.
+                boolean admin = adminHandles.isAdmin(handle);
+                AuthPrincipal principal = new AuthPrincipal(tokenProvider.userIdOf(claims), handle, admin);
 
-                var authentication = new UsernamePasswordAuthenticationToken(
-                        principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
+                var authorities = admin
+                        ? List.of(new SimpleGrantedAuthority("ROLE_USER"), new SimpleGrantedAuthority("ROLE_ADMIN"))
+                        : List.of(new SimpleGrantedAuthority("ROLE_USER"));
+                var authentication = new UsernamePasswordAuthenticationToken(principal, null, authorities);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             } catch (LitmoodException e) {
                 // 만료·위조 토큰은 익명으로 취급한다. 보호된 자원 접근 시 401 이 된다.

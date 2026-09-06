@@ -12,4 +12,6 @@ export interface UserSummary {
   handle: string
   nickname: string
   avatarUrl: UserSummaryAvatarUrl
+  /** 운영자 여부 (#28). 운영 화면 진입 여부를 화면이 판단하는 근거다 */
+  admin: boolean
 }

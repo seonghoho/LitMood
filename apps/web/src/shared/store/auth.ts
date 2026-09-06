@@ -1,14 +1,13 @@
 'use client'
 
 import { create } from 'zustand'
-import { setAccessToken } from '@litmood/api-client'
+import { setAccessToken, type UserSummary } from '@litmood/api-client'
 
-export interface CurrentUser {
-  id: number
-  handle: string
-  nickname: string
-  avatarUrl: string | null
-}
+/**
+ * 로그인한 사용자. 정의는 백엔드 DTO 이고 OpenAPI 를 거쳐 온다 (ADR-008) —
+ * 손으로 베껴 두면 `admin` 같은 필드가 늘 때 화면만 모르는 채로 남는다.
+ */
+export type CurrentUser = UserSummary
 
 interface AuthState {
   user: CurrentUser | null

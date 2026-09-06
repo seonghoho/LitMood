@@ -20,6 +20,7 @@ public enum ErrorCode {
     RECORD_DUPLICATE(HttpStatus.CONFLICT, "이미 기록한 콘텐츠입니다"),
     HANDLE_TAKEN(HttpStatus.CONFLICT, "이미 사용 중인 아이디입니다"),
     EMAIL_TAKEN(HttpStatus.CONFLICT, "이미 가입된 이메일입니다"),
+    REPORT_ALREADY_RESOLVED(HttpStatus.CONFLICT, "이미 처리된 신고입니다"),
     PROVIDER_UNAVAILABLE(HttpStatus.BAD_GATEWAY, "콘텐츠 검색 서비스에 일시적인 문제가 있습니다"),
     RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요"),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "일시적인 오류가 발생했습니다");
