@@ -40,7 +40,7 @@
 손으로 고치지 마세요. 호출 코드까지 옮기는 일은 [#15](https://github.com/seonghoho/LitMood/issues/15)
 로 남아 있습니다.
 
-**미완**: [GitHub Issues](https://github.com/seonghoho/LitMood/issues) 11건에 상세히 적어 두었습니다.
+**미완**: [GitHub Issues](https://github.com/seonghoho/LitMood/issues) 14건에 상세히 적어 두었습니다.
 아래 3절을 보세요.
 
 ---
@@ -118,9 +118,10 @@ pnpm verify            # typecheck + lint + format + build + 백엔드 테스트
 
 **① 먼저 처리해야 하는 것**
 
-| 이슈                                                                 | 이유                                                            |
-| -------------------------------------------------------------------- | --------------------------------------------------------------- |
-| [#1 네이버 키 재발급](https://github.com/seonghoho/LitMood/issues/1) | 보안. 코드 작업이 아니라 **개발자센터에서 재발급**하는 일입니다 |
+| 이슈                                                                          | 이유                                                                                       |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| [#1 네이버 키 재발급](https://github.com/seonghoho/LitMood/issues/1)          | 보안. 코드 작업이 아니라 **개발자센터에서 재발급**하는 일입니다                            |
+| [#22 타임라인 무드·별점 필터](https://github.com/seonghoho/LitMood/issues/22) | P0 인데 반쯤 비어 있습니다. 쿼리는 완성돼 있어 **백엔드 선행 작업이 없는 유일한 건**입니다 |
 
 [#3 프로필 편집](https://github.com/seonghoho/LitMood/issues/3)은 완료했습니다 —
 `/settings` 화면, `PATCH /users/me`, presigned 아바타 업로드. 핸들 변경은 여전히 제외입니다
@@ -153,11 +154,13 @@ pnpm verify            # typecheck + lint + format + build + 백엔드 테스트
 
 **③ 그다음**
 
-| 이슈                                                                         | 이유                                                          |
-| ---------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| [#2 OAuth2 소셜 로그인](https://github.com/seonghoho/LitMood/issues/2)       | P0인데 미완. 카카오 앱 키 발급이 선행돼야 합니다              |
-| [#8 회원 탈퇴](https://github.com/seonghoho/LitMood/issues/8)                | P1. 탈퇴자의 공개 컬렉션 처리 정책을 먼저 정해야 합니다       |
-| [#15 생성 호출 코드·훅 도입](https://github.com/seonghoho/LitMood/issues/15) | #4 의 남은 절반. 모델 타입만 옮겨 놨고 호출은 아직 수동입니다 |
+| 이슈                                                                         | 이유                                                                          |
+| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| [#2 OAuth2 소셜 로그인](https://github.com/seonghoho/LitMood/issues/2)       | P0인데 미완. 카카오 앱 키 발급이 선행돼야 합니다                              |
+| [#8 회원 탈퇴](https://github.com/seonghoho/LitMood/issues/8)                | P1. 탈퇴자의 공개 컬렉션 처리 정책을 먼저 정해야 합니다                       |
+| [#15 생성 호출 코드·훅 도입](https://github.com/seonghoho/LitMood/issues/15) | #4 의 남은 절반. 모델 타입만 옮겨 놨고 호출은 아직 수동입니다                 |
+| [#23 리스트 ↔ 그리드 뷰](https://github.com/seonghoho/LitMood/issues/23)     | F-04-03(P1). 순수 프론트 작업이고 응답에 `coverUrl` 이 이미 있습니다          |
+| [#24 아바타 삭제](https://github.com/seonghoho/LitMood/issues/24)            | 지울 수 없는 것도 문제지만, **교체할 때마다 이전 파일이 스토리지에 남습니다** |
 
 **④ M5 운영 준비** — [09-milestone-5.md](09-milestone-5.md)에 상세 명세
 
@@ -173,6 +176,8 @@ pnpm verify            # typecheck + lint + format + build + 백엔드 테스트
 6. **신고 대상을 어떻게 주소 지정할 것인가** ([#18](https://github.com/seonghoho/LitMood/issues/18)) — 컬렉션 응답에 숫자 id 를 노출할지, `POST /collections/{slug}/report` 를 따로 둘지
 7. **신고를 누가 본다는 것인가** ([#18](https://github.com/seonghoho/LitMood/issues/18), M5-6) — 관리자 권한 개념이 없습니다. 화면을 만들지, 당분간 DB 를 직접 보는 절차를 문서화할지
 8. **Redis 를 클러스터 안에 둘 것인가** ([#20](https://github.com/seonghoho/LitMood/issues/20), M5-2) — DB 와 같은 결정입니다. 지금 `infra/k8s/base/` 에는 **둘 다 없습니다**
+9. **별점 필터가 별점 없는 기록을 지워도 되는가** ([#22](https://github.com/seonghoho/LitMood/issues/22)) — `rating >= x` 라 null 인 행이 탈락합니다. "별점이 아니라 맥락으로 기록한다" 는 이 서비스의 전제와 정면으로 부딪힙니다
+10. **기간 필터의 기준이 무엇인가** ([#22](https://github.com/seonghoho/LitMood/issues/22)) — 지금은 `created_at` 입니다. #6 에서 `startedAt`·`finishedAt` 을 받기 시작했으므로 사용자는 "언제 **봤는지**" 를 기대할 수 있습니다
 
 ---
 
@@ -206,7 +211,7 @@ grep -rn "api/v1" apps/web/src --include="*.ts" --include="*.tsx" | grep -v gene
 
 2026-09-06 기준 엔드포인트 28개 중 **8개가 미배선**이었습니다. 파라미터 단위로도 어긋납니다 —
 `GET /records/me` 는 `moods`·`minRating` 필터를 받는데 화면에는 없어서 F-04-02(P0)가
-반쯤 비어 있습니다.
+반쯤 비어 있습니다 ([#22](https://github.com/seonghoho/LitMood/issues/22)).
 
 ### 이미 밟은 지뢰
 
