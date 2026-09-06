@@ -9,6 +9,7 @@ import { apiFetcher } from '../../fetcher'
 import type {
   CreateRecordRequest,
   FeedParams,
+  MyRecordsByContentParams,
   MyTimelineParams,
   RecordPage,
   RecordResponse,
@@ -169,6 +170,54 @@ export const myTimeline = async (
   options?: RequestInit,
 ): Promise<myTimelineResponse> => {
   return apiFetcher<myTimelineResponse>(getMyTimelineUrl(params), {
+    ...options,
+    method: 'GET',
+  })
+}
+
+/**
+ * 검색 결과 중 이미 기록한 것을 가려낸다 (F-03-01). refs 는 `PROVIDER:externalId` 형식으로 여러 번 준다.
+기록이 없는 콘텐츠는 응답에서 빠지므로, 없다고 404 가 나지는 않는다.
+검색 응답에 실을 수 없는 정보다 — 검색 결과는 캐시되므로 사용자별 값을 섞으면 다른 사람에게 샌다.
+
+ * @summary 콘텐츠로 내 기록 찾기
+ */
+export type myRecordsByContentResponse200 = {
+  data: RecordResponse[]
+  status: 200
+}
+
+export type myRecordsByContentResponseSuccess = myRecordsByContentResponse200 & {
+  headers: Headers
+}
+export type myRecordsByContentResponse = myRecordsByContentResponseSuccess
+
+export const getMyRecordsByContentUrl = (params?: MyRecordsByContentParams) => {
+  const normalizedParams = new URLSearchParams()
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ['refs']
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? 'null' : v.toString())
+      })
+      return
+    }
+  })
+
+  const stringifiedParams = normalizedParams.toString()
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/records/me/by-content?${stringifiedParams}`
+    : `/api/v1/records/me/by-content`
+}
+
+export const myRecordsByContent = async (
+  params?: MyRecordsByContentParams,
+  options?: RequestInit,
+): Promise<myRecordsByContentResponse> => {
+  return apiFetcher<myRecordsByContentResponse>(getMyRecordsByContentUrl(params), {
     ...options,
     method: 'GET',
   })

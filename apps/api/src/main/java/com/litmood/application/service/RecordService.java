@@ -6,10 +6,12 @@ import com.litmood.domain.model.Content;
 import com.litmood.domain.model.ContentType;
 import com.litmood.domain.model.LikeTarget;
 import com.litmood.domain.model.Mood;
+import com.litmood.domain.model.ProviderType;
 import com.litmood.domain.model.Record;
 import com.litmood.domain.model.RecordStatus;
 import com.litmood.domain.model.User;
 import com.litmood.domain.model.Visibility;
+import com.litmood.domain.repository.ContentRepository;
 import com.litmood.domain.repository.MoodRepository;
 import com.litmood.domain.repository.RecordQuery;
 import com.litmood.domain.repository.RecordRepository;
@@ -22,6 +24,8 @@ import com.litmood.interfaces.dto.RecordDtos.RecordResponse;
 import com.litmood.interfaces.dto.RecordDtos.UpdateRecordRequest;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +45,7 @@ public class RecordService {
     private final MoodRepository moodRepository;
     private final UserRepository userRepository;
     private final ContentService contentService;
+    private final ContentRepository contentRepository;
     private final SocialRepository socialRepository;
     private final PopularityRanking popularityRanking;
 
@@ -49,12 +54,14 @@ public class RecordService {
             MoodRepository moodRepository,
             UserRepository userRepository,
             ContentService contentService,
+            ContentRepository contentRepository,
             SocialRepository socialRepository,
             PopularityRanking popularityRanking) {
         this.recordRepository = recordRepository;
         this.moodRepository = moodRepository;
         this.userRepository = userRepository;
         this.contentService = contentService;
+        this.contentRepository = contentRepository;
         this.socialRepository = socialRepository;
         this.popularityRanking = popularityRanking;
     }
@@ -212,6 +219,40 @@ public class RecordService {
         return toPage(recordRepository.findTimeline(query), size, viewerId, query);
     }
 
+    /**
+     * 검색 결과 중 내가 이미 기록한 것을 가려낸다 (#11).
+     *
+     * <p>검색 응답에 실을 수 없는 정보다 — 검색 결과는 Redis 에 캐시되므로
+     * 사용자별 필드를 넣으면 한 사람의 기록 상태가 다른 사람에게 새어 나간다
+     * (docs/03-architecture.md 의 캐싱과 개인화의 경계).
+     *
+     * <p>기록이 없는 콘텐츠는 응답에서 빠진다. 못 찾은 것을 404 로 알리면
+     * 한 화면에 스무 번의 실패가 나가는데, 여기서 "없음"은 오류가 아니라 정상이다.
+     */
+    @Transactional(readOnly = true)
+    public List<RecordResponse> findMineByContents(Long userId, List<ContentKey> keys) {
+        if (keys.isEmpty()) {
+            return List.of();
+        }
+
+        // provider 별로 나누어 조회한다 — (provider, external_id) 유니크 인덱스를 그대로 탄다.
+        // provider 는 셋뿐이라 질의도 최대 세 번이다.
+        Map<ProviderType, List<String>> byProvider = new EnumMap<>(ProviderType.class);
+        for (ContentKey key : keys) {
+            byProvider.computeIfAbsent(key.provider(), p -> new ArrayList<>()).add(key.externalId());
+        }
+
+        List<Long> contentIds = byProvider.entrySet().stream()
+                .flatMap(entry ->
+                        contentRepository.findAllByProviderAndExternalIds(entry.getKey(), entry.getValue()).stream())
+                .map(Content::getId)
+                .toList();
+
+        List<Record> records = recordRepository.findActiveByUserAndContents(userId, contentIds);
+        Set<Long> liked = likedByMe(userId, records);
+        return records.stream().map(record -> RecordResponse.from(record, liked)).toList();
+    }
+
     private RecordPage page(
             Long ownerId,
             List<Visibility> visibleTo,
@@ -314,6 +355,9 @@ public class RecordService {
         }
         return record;
     }
+
+    /** provider 안에서 콘텐츠 하나를 가리키는 좌표 (#11). */
+    public record ContentKey(ProviderType provider, String externalId) {}
 
     /** 타임라인 필터 (F-04-02). */
     public record TimelineFilter(
