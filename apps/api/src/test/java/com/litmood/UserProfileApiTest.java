@@ -61,6 +61,41 @@ class UserProfileApiTest extends AuthenticatedTest {
         }
 
         @Test
+        @DisplayName("빈 문자열이면 아바타가 지워진다 — 다른 필드와 같은 규칙 (이슈 #24)")
+        void emptyAvatarUrlClearsIt() {
+            var auth = signupNewUser();
+            String avatarUrl = STORAGE_PUBLIC_PREFIX + "avatars/" + auth.user().id() + "/a.webp";
+            authedMap(auth, HttpMethod.PATCH, "/api/v1/users/me", Map.of("avatarUrl", avatarUrl));
+
+            ResponseEntity<Map<String, Object>> cleared =
+                    authedMap(auth, HttpMethod.PATCH, "/api/v1/users/me", Map.of("avatarUrl", ""));
+
+            assertThat(cleared.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(cleared.getBody()).containsEntry("avatarUrl", null);
+            // 스토리지가 없어도(테스트에는 MinIO 가 없다) 프로필 저장은 성공해야 한다 —
+            // 이전 객체 정리는 부가 작업이라 실패를 삼킨다
+            assertThat(authedMap(auth, HttpMethod.GET, "/api/v1/users/me", null).getBody())
+                    .containsEntry("avatarUrl", null);
+        }
+
+        @Test
+        @DisplayName("아바타를 바꿔도 다른 필드는 함께 유지된다 — 정리 실패가 저장을 막지 않는다")
+        void replacingAvatarKeepsOtherFields() {
+            var auth = signupNewUser();
+            String first = STORAGE_PUBLIC_PREFIX + "avatars/" + auth.user().id() + "/first.webp";
+            String second = STORAGE_PUBLIC_PREFIX + "avatars/" + auth.user().id() + "/second.webp";
+            authedMap(auth, HttpMethod.PATCH, "/api/v1/users/me", Map.of("avatarUrl", first, "nickname", "그대로"));
+
+            ResponseEntity<Map<String, Object>> replaced =
+                    authedMap(auth, HttpMethod.PATCH, "/api/v1/users/me", Map.of("avatarUrl", second));
+
+            assertThat(replaced.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(replaced.getBody())
+                    .containsEntry("avatarUrl", second)
+                    .containsEntry("nickname", "그대로");
+        }
+
+        @Test
         @DisplayName("스토리지 밖의 avatarUrl 은 400 — 임의 URL 주입 차단")
         void rejectsForeignAvatarUrl() {
             var auth = signupNewUser();

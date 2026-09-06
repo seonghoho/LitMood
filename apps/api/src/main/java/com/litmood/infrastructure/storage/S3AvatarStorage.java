@@ -11,7 +11,10 @@ import java.util.UUID;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
@@ -39,6 +42,9 @@ public class S3AvatarStorage implements AvatarStorage {
      * 아바타는 부가 기능인데, 키 하나가 비었다고 검색·기록·피드까지 함께 죽으면 안 된다.
      */
     private volatile S3Presigner presigner;
+
+    /** 삭제는 presign 과 달리 실제로 스토리지에 접속한다. 같은 이유로 늦게 만든다. */
+    private volatile S3Client client;
 
     public S3AvatarStorage(LitmoodProperties properties) {
         this.storage = properties.storage();
@@ -96,5 +102,44 @@ public class S3AvatarStorage implements AvatarStorage {
     @Override
     public String publicUrlPrefix() {
         return publicUrlPrefix;
+    }
+
+    @Override
+    public void deleteAvatar(String publicUrl) {
+        if (publicUrl == null || !publicUrl.startsWith(publicUrlPrefix)) {
+            // 우리 것이 아닌 URL 은 지울 대상이 아니다
+            return;
+        }
+        String key = publicUrl.substring(publicUrlPrefix.length());
+        client().deleteObject(
+                DeleteObjectRequest.builder().bucket(storage.bucket()).key(key).build());
+    }
+
+    private S3Client client() {
+        S3Client current = client;
+        if (current != null) {
+            return current;
+        }
+        if (storage.accessKey() == null || storage.accessKey().isBlank()) {
+            throw new LitmoodException(ErrorCode.INTERNAL_ERROR, "이미지 저장소가 설정되지 않았습니다");
+        }
+        synchronized (this) {
+            if (client == null) {
+                client = S3Client.builder()
+                        .endpointOverride(URI.create(storage.endpoint()))
+                        .region(Region.US_EAST_1)
+                        .credentialsProvider(StaticCredentialsProvider.create(
+                                AwsBasicCredentials.create(storage.accessKey(), storage.secretKey())))
+                        .serviceConfiguration(software.amazon.awssdk.services.s3.S3Configuration.builder()
+                                .pathStyleAccessEnabled(true)
+                                .build())
+                        // 청소는 부가 작업이다. 스토리지가 응답하지 않을 때 호출부를 오래 붙잡지 않는다.
+                        .overrideConfiguration(ClientOverrideConfiguration.builder()
+                                .apiCallTimeout(Duration.ofSeconds(3))
+                                .build())
+                        .build();
+            }
+            return client;
+        }
     }
 }

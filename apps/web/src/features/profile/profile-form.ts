@@ -36,7 +36,11 @@ export function buildProfilePatch(saved: ProfileDraft, draft: ProfileDraft): Par
   if (draft.defaultVisibility !== saved.defaultVisibility) {
     patch.defaultVisibility = draft.defaultVisibility
   }
-  if (draft.avatarUrl !== saved.avatarUrl) patch.avatarUrl = draft.avatarUrl
+  if (draft.avatarUrl !== saved.avatarUrl) {
+    // 지울 때는 null 이 아니라 빈 문자열이다 — 서버는 넣지 않은 값(null)을
+    // "변경 없음"으로 읽으므로 null 을 보내면 아바타가 그대로 남는다 (이슈 #24)
+    patch.avatarUrl = draft.avatarUrl ?? ''
+  }
 
   return patch
 }
