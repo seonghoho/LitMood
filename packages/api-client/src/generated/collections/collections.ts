@@ -11,6 +11,7 @@ import type {
   CollectionResponse,
   CreateCollectionRequest,
   ReorderItemsRequest,
+  UpdateCollectionItemRequest,
   UpdateCollectionRequest,
 } from '.././model'
 
@@ -125,6 +126,7 @@ export const delete1 = async (slug: string, options?: RequestInit): Promise<dele
 }
 
 /**
+ * 넣지 않은 필드는 변경되지 않는다. 지우려면 빈 문자열을 보낸다.
  * @summary 컬렉션 수정
  */
 export type update1Response200 = {
@@ -151,6 +153,66 @@ export const update1 = async (
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(updateCollectionRequest),
+  })
+}
+
+/**
+ * @summary 콘텐츠 제거
+ */
+export type removeItemResponse200 = {
+  data: CollectionResponse
+  status: 200
+}
+
+export type removeItemResponseSuccess = removeItemResponse200 & {
+  headers: Headers
+}
+export type removeItemResponse = removeItemResponseSuccess
+
+export const getRemoveItemUrl = (slug: string, contentId: number) => {
+  return `/api/v1/collections/${slug}/items/${contentId}`
+}
+
+export const removeItem = async (
+  slug: string,
+  contentId: number,
+  options?: RequestInit,
+): Promise<removeItemResponse> => {
+  return apiFetcher<removeItemResponse>(getRemoveItemUrl(slug, contentId), {
+    ...options,
+    method: 'DELETE',
+  })
+}
+
+/**
+ * 빈 문자열이면 지운다. 담기지 않은 콘텐츠를 가리키면 404 다.
+ * @summary 담은 이유 수정
+ */
+export type updateItemNoteResponse200 = {
+  data: CollectionResponse
+  status: 200
+}
+
+export type updateItemNoteResponseSuccess = updateItemNoteResponse200 & {
+  headers: Headers
+}
+export type updateItemNoteResponse = updateItemNoteResponseSuccess
+
+export const getUpdateItemNoteUrl = (slug: string, contentId: number) => {
+  return `/api/v1/collections/${slug}/items/${contentId}`
+}
+
+export const updateItemNote = async (
+  slug: string,
+  contentId: number,
+  updateCollectionItemRequest: UpdateCollectionItemRequest,
+  options?: RequestInit,
+): Promise<updateItemNoteResponse> => {
+  return apiFetcher<updateItemNoteResponse>(getUpdateItemNoteUrl(slug, contentId), {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateCollectionItemRequest),
   })
 }
 
@@ -182,33 +244,5 @@ export const reorder = async (
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(reorderItemsRequest),
-  })
-}
-
-/**
- * @summary 콘텐츠 제거
- */
-export type removeItemResponse200 = {
-  data: CollectionResponse
-  status: 200
-}
-
-export type removeItemResponseSuccess = removeItemResponse200 & {
-  headers: Headers
-}
-export type removeItemResponse = removeItemResponseSuccess
-
-export const getRemoveItemUrl = (slug: string, contentId: number) => {
-  return `/api/v1/collections/${slug}/items/${contentId}`
-}
-
-export const removeItem = async (
-  slug: string,
-  contentId: number,
-  options?: RequestInit,
-): Promise<removeItemResponse> => {
-  return apiFetcher<removeItemResponse>(getRemoveItemUrl(slug, contentId), {
-    ...options,
-    method: 'DELETE',
   })
 }

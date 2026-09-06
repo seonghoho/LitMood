@@ -7,6 +7,7 @@ import com.litmood.interfaces.dto.CollectionDtos.AddCollectionItemRequest;
 import com.litmood.interfaces.dto.CollectionDtos.CollectionResponse;
 import com.litmood.interfaces.dto.CollectionDtos.CreateCollectionRequest;
 import com.litmood.interfaces.dto.CollectionDtos.ReorderItemsRequest;
+import com.litmood.interfaces.dto.CollectionDtos.UpdateCollectionItemRequest;
 import com.litmood.interfaces.dto.CollectionDtos.UpdateCollectionRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -48,7 +49,7 @@ public class CollectionController {
     }
 
     @PatchMapping("/{slug}")
-    @Operation(summary = "컬렉션 수정")
+    @Operation(summary = "컬렉션 수정", description = "넣지 않은 필드는 변경되지 않는다. 지우려면 빈 문자열을 보낸다.")
     public CollectionResponse update(
             @CurrentUser AuthPrincipal principal,
             @PathVariable String slug,
@@ -77,6 +78,18 @@ public class CollectionController {
     public CollectionResponse removeItem(
             @CurrentUser AuthPrincipal principal, @PathVariable String slug, @PathVariable Long contentId) {
         return collectionService.removeItem(principal.userId(), slug, contentId);
+    }
+
+    @PatchMapping("/{slug}/items/{contentId}")
+    @Operation(
+            summary = "담은 이유 수정",
+            description = "빈 문자열이면 지운다. 담기지 않은 콘텐츠를 가리키면 404 다.")
+    public CollectionResponse updateItemNote(
+            @CurrentUser AuthPrincipal principal,
+            @PathVariable String slug,
+            @PathVariable Long contentId,
+            @Valid @RequestBody UpdateCollectionItemRequest request) {
+        return collectionService.updateItemNote(principal.userId(), slug, contentId, request);
     }
 
     @PatchMapping("/{slug}/items/order")

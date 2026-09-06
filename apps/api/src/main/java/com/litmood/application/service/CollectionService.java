@@ -15,6 +15,7 @@ import com.litmood.interfaces.dto.CollectionDtos.CollectionResponse;
 import com.litmood.interfaces.dto.CollectionDtos.CollectionSummary;
 import com.litmood.interfaces.dto.CollectionDtos.CreateCollectionRequest;
 import com.litmood.interfaces.dto.CollectionDtos.ReorderItemsRequest;
+import com.litmood.interfaces.dto.CollectionDtos.UpdateCollectionItemRequest;
 import com.litmood.interfaces.dto.CollectionDtos.UpdateCollectionRequest;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -116,6 +117,15 @@ public class CollectionService {
     public CollectionResponse removeItem(Long userId, String slug, Long contentId) {
         Collection collection = loadOwned(userId, slug);
         collection.removeItem(contentId);
+        return toResponse(collection, userId);
+    }
+
+    /** 담은 이유를 나중에 고친다 (F-05-03). 빈 문자열이면 지운다. */
+    @Transactional
+    public CollectionResponse updateItemNote(
+            Long userId, String slug, Long contentId, UpdateCollectionItemRequest request) {
+        Collection collection = loadOwned(userId, slug);
+        collection.changeItemNote(contentId, request.note());
         return toResponse(collection, userId);
     }
 
