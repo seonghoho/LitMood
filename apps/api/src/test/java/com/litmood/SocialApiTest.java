@@ -464,10 +464,34 @@ class SocialApiTest extends AuthenticatedTest {
                 new ParameterizedTypeReference<>() {});
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        List<String> titles = response.getBody().stream().map(m -> (String) m.get("title")).toList();
+        List<String> titles = response.getBody().stream().map(SocialApiTest::titleOf).toList();
         // 많이 기록된 쪽이 적게 기록된 쪽보다 앞에 온다
         assertThat(titles).contains("많이 기록된 책", "적게 기록된 책");
         assertThat(titles.indexOf("많이 기록된 책")).isLessThan(titles.indexOf("적게 기록된 책"));
+
+        // 순위의 근거인 기록 수가 함께 온다 — 없으면 화면에서 그냥 목록과 구분되지 않는다
+        Map<String, Object> top = response.getBody().stream()
+                .filter(row -> "많이 기록된 책".equals(titleOf(row)))
+                .findFirst()
+                .orElseThrow();
+        assertThat(((Number) top.get("recordCount")).longValue()).isEqualTo(3L);
+    }
+
+    @Test
+    @DisplayName("period 에 모르는 값이 와도 500 이 아니라 주간으로 본다")
+    void unknownPeriodFallsBackToWeek() {
+        assertThat(rest.exchange(
+                                "/api/v1/discover/popular?period=quarterly",
+                                HttpMethod.GET,
+                                null,
+                                new ParameterizedTypeReference<List<Map<String, Object>>>() {})
+                        .getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static String titleOf(Map<String, Object> row) {
+        return (String) ((Map<String, Object>) row.get("content")).get("title");
     }
 
     // ── helpers ─────────────────────────────────────────────

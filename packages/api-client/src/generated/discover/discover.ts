@@ -6,14 +6,14 @@
  * OpenAPI spec version: v1
  */
 import { apiFetcher } from '../../fetcher'
-import type { ContentRef, PopularParams } from '.././model'
+import type { PopularContent, PopularParams } from '.././model'
 
 /**
- * 기간 내 기록 수 기준. Redis Sorted Set 으로 집계한다.
+ * 기간 내 기록 수 기준. Redis Sorted Set 으로 집계한다. period 는 week(기본) 또는 month 이고, 그 밖의 값은 week 로 본다.
  * @summary 인기 콘텐츠
  */
 export type popularResponse200 = {
-  data: ContentRef[]
+  data: PopularContent[]
   status: 200
 }
 

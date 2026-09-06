@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { css } from 'styled-system/css'
-import { flex, stack } from 'styled-system/patterns'
+import { stack } from 'styled-system/patterns'
 import { FALLBACK_MOOD_COLOR } from '@litmood/ui'
-import { CONTENT_TYPE_LABEL, type ContentType } from '@/features/content/types'
+import { RankedContentList } from '@/features/content/RankedContentList'
 import type { ContentRef, MoodTag } from '@/features/record/types'
 import { decodeRouteParam } from '@/shared/lib/route-params'
 
@@ -84,62 +84,7 @@ export default async function MoodPage({ params }: { params: Promise<{ name: str
           아직 이 무드로 공개된 기록이 없습니다.
         </p>
       ) : (
-        <ol className={stack({ gap: '3' })}>
-          {contents.map((ranked, index) => (
-            <li
-              key={ranked.content.id}
-              className={flex({
-                gap: '4',
-                p: '4',
-                rounded: 'md',
-                bg: 'bg.surface',
-                borderWidth: '1px',
-                borderStyle: 'solid',
-                borderColor: 'border.default',
-                alignItems: 'center',
-              })}
-            >
-              <span
-                className={css({
-                  textStyle: 'title',
-                  color: 'fg.muted',
-                  fontFamily: 'mono',
-                  w: '32px',
-                  flexShrink: 0,
-                })}
-              >
-                {index + 1}
-              </span>
-
-              <div className={stack({ gap: '1', flex: 1, minW: 0 })}>
-                <h2 className={css({ textStyle: 'body', fontWeight: '600', color: 'fg.default' })}>
-                  {ranked.content.title}
-                </h2>
-                <p className={css({ textStyle: 'caption', color: 'fg.muted' })}>
-                  {CONTENT_TYPE_LABEL[ranked.content.type as ContentType]}
-                  {ranked.content.creators.length > 0 && ` · ${ranked.content.creators.join(', ')}`}
-                </p>
-              </div>
-
-              <div className={stack({ gap: '0.5', alignItems: 'flex-end', flexShrink: 0 })}>
-                <span className={css({ textStyle: 'caption', color: 'fg.muted' })}>
-                  {ranked.recordCount}명
-                </span>
-                {ranked.averageRating != null && (
-                  <span
-                    className={css({
-                      textStyle: 'caption',
-                      color: 'brand.default',
-                      fontWeight: '600',
-                    })}
-                  >
-                    ★ {ranked.averageRating.toFixed(1)}
-                  </span>
-                )}
-              </div>
-            </li>
-          ))}
-        </ol>
+        <RankedContentList items={contents} />
       )}
 
       <Link
