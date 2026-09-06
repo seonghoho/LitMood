@@ -21,6 +21,8 @@ export interface CollectionResponse {
   itemCount: number
   ownerHandle: CollectionResponseOwnerHandle
   ownerNickname: CollectionResponseOwnerNickname
+  likeCount: number
+  likedByMe: boolean
   items: CollectionItemResponse[]
   createdAt: string
   updatedAt: string

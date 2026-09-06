@@ -161,7 +161,7 @@ export function RecordCard({
 
         <div className={flex({ gap: '2', alignItems: 'center', mt: '1' })}>
           <LikeButton
-            recordId={record.id}
+            target={{ kind: 'record', id: record.id }}
             initialCount={record.likeCount}
             initialLiked={record.likedByMe}
           />

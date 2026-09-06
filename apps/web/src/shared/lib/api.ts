@@ -80,4 +80,6 @@ export const apiPost = <T>(path: string, body?: unknown) =>
 export const apiPatch = <T>(path: string, body: unknown) =>
   request<T>(path, { method: 'PATCH', body: JSON.stringify(body) })
 
-export const apiDelete = (path: string) => request<void>(path, { method: 'DELETE' })
+// 204 면 본문이 없고, 좋아요 취소처럼 갱신된 상태를 돌려주는 삭제도 있다.
+// 기본 타입이 void 라 본문을 쓰지 않는 호출부는 그대로 둔다.
+export const apiDelete = <T = void>(path: string) => request<T>(path, { method: 'DELETE' })

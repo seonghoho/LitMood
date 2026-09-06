@@ -6,6 +6,7 @@ import { flex, stack } from 'styled-system/patterns'
 import { token } from 'styled-system/tokens'
 import { fetchCollection } from '@/features/collection/server'
 import { CONTENT_TYPE_LABEL } from '@/features/content/types'
+import { CollectionLikeButton } from '@/features/social/CollectionLikeButton'
 
 /**
  * 공개 컬렉션 (F-05-04).
@@ -104,6 +105,9 @@ export default async function CollectionPage({ params }: { params: Promise<{ slu
           {' · '}
           {collection.itemCount}개
         </p>
+        <div>
+          <CollectionLikeButton slug={collection.slug} initialCount={collection.likeCount} />
+        </div>
       </header>
 
       {collection.items.length === 0 ? (

@@ -333,6 +333,114 @@ class CollectionApiTest extends AuthenticatedTest {
         return response.getBody();
     }
 
+    @Test
+    @DisplayName("컬렉션 좋아요가 응답의 likeCount·likedByMe 에 반영된다 (F-06-03)")
+    void collectionLikeReflectedInResponse() {
+        AuthResponse owner = signupNewUser();
+        AuthResponse liker = signupNewUser();
+        String slug = createCollection(owner, "좋아요 대상").slug();
+
+        CollectionResponse before =
+                authed(liker, HttpMethod.GET, "/api/v1/collections/" + slug, null, CollectionResponse.class)
+                        .getBody();
+        assertThat(before.likeCount()).isZero();
+        assertThat(before.likedByMe()).isFalse();
+
+        authed(liker, HttpMethod.POST, "/api/v1/collections/" + slug + "/like", null, Map.class);
+
+        CollectionResponse after =
+                authed(liker, HttpMethod.GET, "/api/v1/collections/" + slug, null, CollectionResponse.class)
+                        .getBody();
+        assertThat(after.likeCount()).isEqualTo(1);
+        assertThat(after.likedByMe()).isTrue();
+    }
+
+    @Test
+    @DisplayName("likedByMe 는 조회자마다 다르다 — 남이 누른 좋아요는 내 것이 아니다")
+    void likedByMeIsPerViewer() {
+        AuthResponse owner = signupNewUser();
+        AuthResponse liker = signupNewUser();
+        AuthResponse other = signupNewUser();
+        String slug = createCollection(owner, "조회자별 상태").slug();
+        authed(liker, HttpMethod.POST, "/api/v1/collections/" + slug + "/like", null, Map.class);
+
+        CollectionResponse seenByOther =
+                authed(other, HttpMethod.GET, "/api/v1/collections/" + slug, null, CollectionResponse.class)
+                        .getBody();
+
+        assertThat(seenByOther.likeCount()).isEqualTo(1);
+        assertThat(seenByOther.likedByMe()).isFalse();
+    }
+
+    @Test
+    @DisplayName("비로그인 조회의 likedByMe 는 언제나 false — 이 응답은 캐시된다")
+    void anonymousViewNeverLiked() {
+        AuthResponse owner = signupNewUser();
+        AuthResponse liker = signupNewUser();
+        String slug = createCollection(owner, "익명 조회").slug();
+        authed(liker, HttpMethod.POST, "/api/v1/collections/" + slug + "/like", null, Map.class);
+
+        CollectionResponse anonymous =
+                rest.getForEntity("/api/v1/collections/" + slug, CollectionResponse.class).getBody();
+
+        assertThat(anonymous.likeCount()).isEqualTo(1);
+        assertThat(anonymous.likedByMe()).isFalse();
+    }
+
+    @Test
+    @DisplayName("같은 컬렉션을 두 번 좋아요해도 개수는 하나다")
+    void likingTwiceCountsOnce() {
+        AuthResponse owner = signupNewUser();
+        AuthResponse liker = signupNewUser();
+        String slug = createCollection(owner, "멱등 좋아요").slug();
+
+        authed(liker, HttpMethod.POST, "/api/v1/collections/" + slug + "/like", null, Map.class);
+        authed(liker, HttpMethod.POST, "/api/v1/collections/" + slug + "/like", null, Map.class);
+
+        assertThat(authed(liker, HttpMethod.GET, "/api/v1/collections/" + slug, null, CollectionResponse.class)
+                        .getBody()
+                        .likeCount())
+                .isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("좋아요를 취소하면 개수가 줄고 likedByMe 가 풀린다")
+    void unlikeRestoresState() {
+        AuthResponse owner = signupNewUser();
+        AuthResponse liker = signupNewUser();
+        String slug = createCollection(owner, "취소 대상").slug();
+        authed(liker, HttpMethod.POST, "/api/v1/collections/" + slug + "/like", null, Map.class);
+
+        authed(liker, HttpMethod.DELETE, "/api/v1/collections/" + slug + "/like", null, Map.class);
+
+        CollectionResponse after =
+                authed(liker, HttpMethod.GET, "/api/v1/collections/" + slug, null, CollectionResponse.class)
+                        .getBody();
+        assertThat(after.likeCount()).isZero();
+        assertThat(after.likedByMe()).isFalse();
+    }
+
+    @Test
+    @DisplayName("프로필의 컬렉션 목록에도 좋아요 수가 실린다")
+    void summaryCarriesLikeCount() {
+        AuthResponse owner = signupNewUser();
+        AuthResponse liker = signupNewUser();
+        String slug = createCollection(owner, "목록에 뜨는 좋아요").slug();
+        authed(liker, HttpMethod.POST, "/api/v1/collections/" + slug + "/like", null, Map.class);
+
+        ResponseEntity<List<Map<String, Object>>> list = rest.exchange(
+                "/api/v1/users/@" + owner.user().handle() + "/collections",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<>() {});
+
+        assertThat(list.getBody())
+                .anySatisfy(summary -> {
+                    assertThat(summary.get("slug")).isEqualTo(slug);
+                    assertThat(summary.get("likeCount")).isEqualTo(1);
+                });
+    }
+
     private void record(
             AuthResponse auth, String isbn, List<String> moods, BigDecimal rating, Visibility visibility) {
         authed(auth, HttpMethod.POST, "/api/v1/records",
