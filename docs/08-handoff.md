@@ -3,7 +3,7 @@
 > **다음 세션 · 다른 PC 에서 이어받는 사람을 위한 문서입니다.**
 > 이 문서 하나로 지금까지의 상태를 파악하고 작업을 이어갈 수 있어야 합니다.
 
-최종 갱신: **2026-09-04** (이슈 #3·#5·#6 완료 시점)
+최종 갱신: **2026-09-06** (M4 미배선분 점검, 이슈 #17~#20 등록 시점)
 
 ---
 
@@ -21,14 +21,26 @@
 | M5 운영 준비          | ⬜   | — ([09-milestone-5.md](09-milestone-5.md)) |
 
 **동작하는 것**: 가입 → 검색 → 기록 → 타임라인 → 공개 프로필 → 컬렉션 공유(OG 이미지) →
-무드 탐색 → 팔로우 → 피드 → 좋아요.
+무드 탐색 → 팔로우 → 피드 → 기록 좋아요.
+
+**M4 소셜의 절반은 화면이 없습니다.** API 는 `fc5a4e2` 에서 다 만들었는데 프론트 호출부가
+0건입니다 — 차단([#17](https://github.com/seonghoho/LitMood/issues/17)),
+신고([#18](https://github.com/seonghoho/LitMood/issues/18)),
+컬렉션 좋아요([#19](https://github.com/seonghoho/LitMood/issues/19)),
+인기 콘텐츠([#20](https://github.com/seonghoho/LitMood/issues/20)).
+넷 다 **프론트만으로는 끝나지 않습니다** — 응답 DTO 가 조회자별 상태를 말하지 않거나
+(`blockedByMe`, 컬렉션 `likeCount`/`likedByMe`), 신고 대상을 주소로 지정할 수 없거나
+(`targetId` 가 `Long` 인데 컬렉션은 slug·사용자는 handle), 순위 점수를 버리고 있습니다.
+자세한 것은 각 이슈에 적었습니다.
+
+랜딩 페이지(`app/page.tsx`)는 아직 **M0 스켈레톤**입니다. 비로그인 유입 경로인데 볼 것이 없습니다.
 
 **API 계약 파이프라인이 이어졌습니다** (ADR-008, [#4](https://github.com/seonghoho/LitMood/issues/4)).
 프론트의 모델 타입은 이제 백엔드 DTO 에서 생성됩니다 — `features/*/types.ts` 는 재수출일 뿐이니
 손으로 고치지 마세요. 호출 코드까지 옮기는 일은 [#15](https://github.com/seonghoho/LitMood/issues/15)
 로 남아 있습니다.
 
-**미완**: [GitHub Issues](https://github.com/seonghoho/LitMood/issues) 9건에 상세히 적어 두었습니다.
+**미완**: [GitHub Issues](https://github.com/seonghoho/LitMood/issues) 11건에 상세히 적어 두었습니다.
 아래 3절을 보세요.
 
 ---
@@ -130,7 +142,16 @@ pnpm verify            # typecheck + lint + format + build + 백엔드 테스트
 또 DB 에만 있고 도메인에는 없던 규칙(`started_at <= finished_at`)을 엔티티에도 넣었습니다.
 날짜 입력 화면이 생기면서 사용자가 순서를 뒤집으면 제약 위반이 그대로 500 이 될 수 있었습니다.
 
-**② 그다음**
+**② M4 의 미배선분** — 만들어 둔 API 에 화면을 붙이는 일. 넷 다 백엔드 선행 작업이 있습니다
+
+| 이슈                                                                     | 선행 작업 (백엔드)                                                                              |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| [#19 컬렉션 좋아요](https://github.com/seonghoho/LitMood/issues/19)      | `CollectionResponse` 에 `likeCount`·`likedByMe` 싣기. **가장 얇으니 여기서 시작하세요**         |
+| [#17 차단 UI](https://github.com/seonghoho/LitMood/issues/17)            | `PublicProfile` 에 `blockedByMe`. 차단이 공개 프로필·공개 기록 목록에는 적용되지 않는 것도 함께 |
+| [#18 신고 UI](https://github.com/seonghoho/LitMood/issues/18)            | `targetId` 로는 컬렉션·사용자를 지정할 수 없음. 신고를 **볼 방법**이 없는 것이 더 큰 문제       |
+| [#20 랜딩 + 인기 콘텐츠](https://github.com/seonghoho/LitMood/issues/20) | `/discover/popular` 이 순위 점수를 버림 + N+1. 클러스터에 Redis 가 없는 것이 선결               |
+
+**③ 그다음**
 
 | 이슈                                                                         | 이유                                                          |
 | ---------------------------------------------------------------------------- | ------------------------------------------------------------- |
@@ -138,7 +159,7 @@ pnpm verify            # typecheck + lint + format + build + 백엔드 테스트
 | [#8 회원 탈퇴](https://github.com/seonghoho/LitMood/issues/8)                | P1. 탈퇴자의 공개 컬렉션 처리 정책을 먼저 정해야 합니다       |
 | [#15 생성 호출 코드·훅 도입](https://github.com/seonghoho/LitMood/issues/15) | #4 의 남은 절반. 모델 타입만 옮겨 놨고 호출은 아직 수동입니다 |
 
-**③ M5 운영 준비** — [09-milestone-5.md](09-milestone-5.md)에 상세 명세
+**④ M5 운영 준비** — [09-milestone-5.md](09-milestone-5.md)에 상세 명세
 
 ### 판단이 필요한 열린 질문
 
@@ -148,6 +169,10 @@ pnpm verify            # typecheck + lint + format + build + 백엔드 테스트
 2. **react-query 를 올릴 것인가, orval 을 올릴 것인가** ([#15](https://github.com/seonghoho/LitMood/issues/15)) — 훅 생성이 이 버전 불일치에 막혀 있습니다. 어느 쪽을 움직일지는 확인이 필요합니다
 3. **핸들 변경 허용 여부** (#3) — 공개 URL 이 바뀌면 공유된 링크가 깨집니다
 4. **탈퇴자의 공개 컬렉션 처리** (#8) — 정책대로면 링크가 404 가 됩니다
+5. **차단을 어디까지 적용할 것인가** ([#17](https://github.com/seonghoho/LitMood/issues/17)) — 지금은 피드·기록 단건·컬렉션 조회만 막힙니다. 공개 프로필과 무드·인기 집계는 그대로 보입니다
+6. **신고 대상을 어떻게 주소 지정할 것인가** ([#18](https://github.com/seonghoho/LitMood/issues/18)) — 컬렉션 응답에 숫자 id 를 노출할지, `POST /collections/{slug}/report` 를 따로 둘지
+7. **신고를 누가 본다는 것인가** ([#18](https://github.com/seonghoho/LitMood/issues/18), M5-6) — 관리자 권한 개념이 없습니다. 화면을 만들지, 당분간 DB 를 직접 보는 절차를 문서화할지
+8. **Redis 를 클러스터 안에 둘 것인가** ([#20](https://github.com/seonghoho/LitMood/issues/20), M5-2) — DB 와 같은 결정입니다. 지금 `infra/k8s/base/` 에는 **둘 다 없습니다**
 
 ---
 
@@ -164,6 +189,24 @@ pnpm verify            # typecheck + lint + format + build + 백엔드 테스트
 - **Next.js** — 공개 프로필·컬렉션의 SSR 과 `next/og` 동적 OG 이미지. 별도 이미지 서버가 없습니다
 - **Panda CSS** — Emotion 이었다면 `"use client"` 가 전염돼 RSC 를 못 썼을 겁니다
 - **Java 21 가상 스레드** — 외부 API 3개 병렬 호출을 리액티브 오염 없이 평범한 명령형 코드로 씁니다
+
+### API 가 있다고 화면이 있는 것은 아니다
+
+M4 에서 소셜 API 를 한 번에 만들고 화면은 일부만 붙였는데, 그 사실이 로드맵에는
+"M4 ✅" 로만 남아 **미배선분이 드러나지 않았습니다**. 마일스톤 체크가 아니라 호출부를
+직접 세는 편이 정확합니다:
+
+```bash
+# 백엔드가 노출하는 엔드포인트
+grep -rn "@\(Get\|Post\|Put\|Patch\|Delete\)Mapping" apps/api/src/main/java/com/litmood/interfaces/controller/
+
+# 프론트가 실제로 부르는 것
+grep -rn "api/v1" apps/web/src --include="*.ts" --include="*.tsx" | grep -v generated
+```
+
+2026-09-06 기준 엔드포인트 28개 중 **8개가 미배선**이었습니다. 파라미터 단위로도 어긋납니다 —
+`GET /records/me` 는 `moods`·`minRating` 필터를 받는데 화면에는 없어서 F-04-02(P0)가
+반쯤 비어 있습니다.
 
 ### 이미 밟은 지뢰
 
@@ -207,3 +250,11 @@ pnpm verify            # typecheck + lint + format + build + 백엔드 테스트
   검증하지 못하고 브라우저로 수동 확인합니다 ([이슈 #9](https://github.com/seonghoho/LitMood/issues/9))
 - **아바타 업로드는 로컬 MinIO 로만 검증했습니다.** 실제 S3 나 프로덕션 버킷 정책은 확인하지 않았습니다
 - **성능·부하 테스트를 하지 않았습니다.** NFR-01(p95 < 300ms)은 측정되지 않은 목표입니다
+- **`infra/k8s/base/` 에 Postgres 도 Redis 도 없습니다.** api·web 의 Deployment·Service·Ingress·HPA·
+  ConfigMap 뿐입니다. 지금 상태로 배포하면 검색 캐시·리프레시 토큰·인기 랭킹이 갈 곳이 없습니다
+- **Rate limit 구현이 0건입니다.** [05-api-spec.md](05-api-spec.md)에 정책(인증 600/min, 비인증
+  60/min, 검색 30/min)만 있습니다. 신고·좋아요처럼 악용되기 쉬운 엔드포인트가 그대로 열려 있습니다
+- **커스텀 메트릭이 0건입니다.** `MeterRegistry`·`@Timed`·`Counter` 사용처가 없어 기본 메트릭만
+  나옵니다. 특히 `PopularityRanking` 은 실패를 조용히 삼키도록 설계돼 있어(의도) **Redis 가 죽어도
+  아무도 모릅니다**. 로그도 아직 평문입니다
+- **관리자 권한 개념이 없습니다.** 전원 `ROLE_USER` 라 `reports` 에 쌓인 신고를 볼 수단이 없습니다
