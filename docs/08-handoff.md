@@ -3,7 +3,7 @@
 > **다음 세션 · 다른 PC 에서 이어받는 사람을 위한 문서입니다.**
 > 이 문서 하나로 지금까지의 상태를 파악하고 작업을 이어갈 수 있어야 합니다.
 
-최종 갱신: **2026-09-06** (이슈 #17~#20 · #22 · #23 · #24 완료 시점)
+최종 갱신: **2026-09-06** (이슈 #17~#20 · #22 · #23 · #24 · #11 · #7 완료 시점)
 
 ---
 
@@ -30,8 +30,14 @@
 랜딩·인기 콘텐츠([#20](https://github.com/seonghoho/LitMood/issues/20)).
 넷 다 화면만으로 끝나지 않았고 응답 계약을 함께 고쳤습니다. 자세한 것은 3절에 있습니다.
 
-**지금 바로 집어 들 수 있는 일은 남아 있지 않습니다.** 남은 8건은 전부 선행 조건이 있습니다 —
-넷은 코드 밖 결정이나 외부 발급이고, 넷은 다른 작업이나 새 API 가 앞에 있습니다.
+**새 API 가 앞에 있던 둘도 끝났습니다** — 검색에서 기존 기록 열기
+([#11](https://github.com/seonghoho/LitMood/issues/11)), 컬렉션 편집 보강
+([#7](https://github.com/seonghoho/LitMood/issues/7)). 둘 다 백엔드를 새로 만들어야 했고,
+`#7` 에서는 **기록에서 이미 고쳤던 부분 수정 버그가 컬렉션에 그대로 남아 있는 것**을 함께
+고쳤습니다.
+
+**이제 코드만으로 집어 들 수 있는 일은 남아 있지 않습니다.** 남은 6건은 전부 선행 조건이
+있습니다 — 넷은 코드 밖 결정이나 외부 발급이고, 둘은 `#2`(소셜 로그인)와 버전 결정 뒤입니다.
 아래 3절에 무엇이 막고 있는지 적었습니다.
 
 **API 계약 파이프라인이 이어졌습니다** (ADR-008, [#4](https://github.com/seonghoho/LitMood/issues/4)).
@@ -39,7 +45,7 @@
 손으로 고치지 마세요. 호출 코드까지 옮기는 일은 [#15](https://github.com/seonghoho/LitMood/issues/15)
 로 남아 있습니다.
 
-**미완**: [GitHub Issues](https://github.com/seonghoho/LitMood/issues) 8건에 상세히 적어 두었습니다.
+**미완**: [GitHub Issues](https://github.com/seonghoho/LitMood/issues) 6건에 상세히 적어 두었습니다.
 아래 3절을 보세요.
 
 ---
@@ -124,24 +130,44 @@ pnpm verify            # typecheck + lint + format + build + 백엔드 테스트
 | [#8 회원 탈퇴](https://github.com/seonghoho/LitMood/issues/8)                      | 탈퇴자의 공개 컬렉션 처리 정책. 30일 배치를 돌릴 스케줄러도 없습니다     |
 | [#28 신고 처리 화면 + 관리자 권한](https://github.com/seonghoho/LitMood/issues/28) | **관리자를 어떻게 임명할 것인가**. 지금 전원 `ROLE_USER` 입니다          |
 
-**② P2 — 남은 넷. 착수 순서에 이유가 있습니다**
+**② P2 — 남은 둘. 순서가 정해져 있습니다**
 
 `#2` 가 들어오면 로그인 경로가 하나 더 생깁니다. `#9`(E2E)와 `#15`(호출 코드 이관)는 인증
 흐름을 정면으로 건드리므로 **`#2` 뒤에 하는 편이 다시 손대는 일을 줄입니다.**
 
-`#7` 과 `#11` 은 백엔드를 새로 만들면 되므로 **`#2` 를 기다리지 않아도 됩니다.**
-지금 이어서 한다면 이 둘 중 하나입니다.
+`#2` 를 기다리지 않아도 되던 `#7` 과 `#11` 은 이번 라운드에 끝났습니다. 남은 둘은
+서로도 순서가 있습니다 — `#15` 가 먼저입니다.
 
-| 이슈                                                                          | 앞에 있는 것                                                                            |
-| ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| [#7 컬렉션 편집 보강](https://github.com/seonghoho/LitMood/issues/7)          | `PATCH /collections/{slug}/items/{contentId}` 신설 (도메인 `changeNote()` 는 이미 있음) |
-| [#11 검색에서 기존 기록 열기](https://github.com/seonghoho/LitMood/issues/11) | `GET /records/me/by-content` 신설. 검색 응답에 넣으면 캐시로 샙니다                     |
-| [#15 생성 호출 코드·훅 도입](https://github.com/seonghoho/LitMood/issues/15)  | `#2`. 그리고 operationId 정리 → react-query 버전 정합 순서로 막혀 있습니다              |
-| [#9 무한 스크롤 + E2E](https://github.com/seonghoho/LitMood/issues/9)         | `#15`. 뒤에 하면 `useInfiniteQuery` 가 생겨 일이 줄어듭니다                             |
+| 이슈                                                                         | 앞에 있는 것                                                               |
+| ---------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| [#15 생성 호출 코드·훅 도입](https://github.com/seonghoho/LitMood/issues/15) | `#2`. 그리고 operationId 정리 → react-query 버전 정합 순서로 막혀 있습니다 |
+| [#9 무한 스크롤 + E2E](https://github.com/seonghoho/LitMood/issues/9)        | `#15`. 뒤에 하면 `useInfiniteQuery` 가 생겨 일이 줄어듭니다                |
 
 **③ M5 운영 준비** — [09-milestone-5.md](09-milestone-5.md)에 상세 명세
 
 ### 이번 라운드에 끝난 것
+
+[#11 검색에서 기존 기록 열기](https://github.com/seonghoho/LitMood/issues/11) — 검색 화면의
+"기록됨"은 **이번 세션에 만든 것만** 담는 로컬 `Set` 이었습니다. 예전에 기록한 콘텐츠는 눌러도
+생성 모달이 열렸고, 저장하면 불변식 1 에 걸려 409 를 받은 뒤 "기존 기록을 수정해 주세요"라는
+안내만 나왔습니다 — **그 기존 기록으로 가는 길은 화면에 없었습니다.** 검색 응답에 실을 수 없는
+정보라(캐시로 샙니다) 화면이 자기 세션으로 따로 묻습니다. **배치 조회로 갔습니다** — 한 건씩
+물었다면 결과 한 화면에 왕복 스무 번과 404 스무 번이 납니다. 기록이 없는 콘텐츠는 404 가 아니라
+응답에서 빠집니다. 조회에 `resolveOrCreate` 를 쓰지 않은 이유는, 그랬다면 **검색 결과를 훑는
+것만으로** 자체 DB 에 콘텐츠가 쌓이고 외부 provider 호출이 따라 붙기 때문입니다.
+
+[#7 컬렉션 편집 보강](https://github.com/seonghoho/LitMood/issues/7) — 담은 이유는 담을 때만
+넣을 수 있었습니다. 도메인의 `changeNote()` 는 M3 부터 있었고 **그 앞의 컨트롤러가 없었습니다.**
+`PATCH /collections/{slug}/items/{contentId}` 를 열면서, `Collection.edit` 이 **넣지 않은 필드를
+지우던 버그**를 함께 고쳤습니다 — 기록에서 이미 고쳤던 것과 같은 버그가 컬렉션에 남아 있어
+제목만 고치는 요청이 설명과 커버를 날렸습니다. 이제 규칙이 둘 다 같습니다. 응답에 `coverPinned`
+를 더한 이유는 `coverUrl` 만으로는 "자동(첫 아이템)"과 "첫 아이템 표지를 직접 고름"을 구분할 수
+없어서입니다 — 값이 같아도 순서를 바꾸면 결과가 달라집니다. **드래그 정렬은 넣지 않기로
+했습니다**(이슈에 열려 있던 결정): 키보드 조작(NFR-05), 터치 드래그와 스크롤 충돌, 번들 증가.
+아이템이 스물을 넘기 시작하면 재검토합니다 — 이유를 코드 주석에 남겨 "빠뜨린 것"으로 읽히지
+않게 했습니다.
+
+### 앞선 라운드에 끝난 것
 
 [#22 타임라인 필터](https://github.com/seonghoho/LitMood/issues/22) — 무드·별점 필터가 없어
 **P0 인 F-04-02 가 반쯤 비어 있었습니다.** 쿼리는 처음부터 여섯 가지를 다 받고 있었고 화면만
@@ -182,18 +208,20 @@ pnpm verify            # typecheck + lint + format + build + 백엔드 테스트
 (MinIO 를 내려 두고 확인했습니다 — PATCH 는 200 으로 끝나고 로그에 남습니다).
 주기적 청소로 가지 않은 이유는 스케줄러가 없어서입니다 — `#8` 이 부딪히는 것과 같은 벽입니다.
 
-앞선 라운드에서 [#3 프로필 편집](https://github.com/seonghoho/LitMood/issues/3),
+그보다 앞선 라운드에서 [#3 프로필 편집](https://github.com/seonghoho/LitMood/issues/3),
 [#5 기록 수정·삭제](https://github.com/seonghoho/LitMood/issues/5),
 [#6 소비 맥락·스포일러](https://github.com/seonghoho/LitMood/issues/6)를 끝냈습니다. 그때
 **PATCH 가 넣지 않은 필드를 지우던 버그**를 고쳐 규칙이 하나가 됐습니다 — 넣지 않은 필드는
 변경되지 않고, 지우려면 문자열은 빈 문자열, 별점은 `clearRating`, 날짜는 `clearStartedAt`·
-`clearFinishedAt` 을 씁니다. 아바타만 이 규칙에서 빠져 있습니다
-([#24](https://github.com/seonghoho/LitMood/issues/24)).
+`clearFinishedAt` 을 씁니다. 아바타는 `#24` 에서, 컬렉션은 `#7` 에서 이 규칙에 합류했습니다 —
+어디에 아직 안 붙어 있는지는 4절의 "규칙을 한 곳에서 고쳐도 다른 곳에는 그대로 남아 있다"에
+적어 뒀습니다.
 
 ### 판단이 필요한 열린 질문
 
 작업을 이어받는 사람이 결정해야 할 것들입니다. 각 이슈에 배경을 적어 두었습니다.
-이번 라운드에 닫힌 질문(차단 범위, 신고 대상 주소 지정, 신고 열람 경로, 별점 필터의 처리)은
+이번 라운드에 닫힌 질문(단건 조회 대 배치 조회, 드래그 정렬 도입 여부, 커버 지정 방식)과
+앞선 라운드의 것(차단 범위, 신고 대상 주소 지정, 신고 열람 경로, 별점 필터의 처리)은
 결정한 내용과 함께 각 PR 에 남겼습니다.
 
 1. **소셜 계정과 이메일 계정의 연결 정책** ([#2](https://github.com/seonghoho/LitMood/issues/2)) — 자동 연결은 편하지만 계정 탈취 경로가 될 수 있습니다
@@ -244,6 +272,26 @@ grep -rn "api/v1" apps/web/src --include="*.ts" --include="*.tsx" | grep -v gene
 같은 함정을 다시 밟지 않도록 [CLAUDE.md](../CLAUDE.md)의 "자주 걸리는 함정" 표를 보세요.
 전부 실제로 터졌던 것들입니다.
 
+### 규칙을 한 곳에서 고쳐도 다른 곳에는 그대로 남아 있다
+
+PATCH 의 부분 수정 규칙("넣지 않은 필드는 변경되지 않는다, 지우려면 빈 문자열")을 기록에서
+고쳤을 때([#5](https://github.com/seonghoho/LitMood/issues/5)) **컬렉션은 그대로였습니다.**
+`Collection.edit` 은 `description`·`coverUrl` 을 그냥 대입하고 있어서 제목만 고치는 요청이
+나머지를 날렸습니다. 편집 화면이 없어 아무도 밟지 않았을 뿐입니다
+([#7](https://github.com/seonghoho/LitMood/issues/7) 에서 고쳤습니다).
+
+같은 규칙이 **세 곳에 따로 구현돼 있습니다.** 규칙을 바꾸면 셋을 함께 봐야 합니다.
+
+```bash
+grep -rn "public void edit(\|updateProfile(" apps/api/src/main/java/com/litmood/domain/model/
+```
+
+- `Record.edit` — 엔티티가 규칙을 가짐 (`isBlank() ? null : value`)
+- `Collection.edit` — 엔티티가 규칙을 가짐 (#7 에서 맞췄습니다)
+- `User.updateProfile` — **규칙이 엔티티가 아니라 `UserService` 에 있습니다.** 서비스가
+  `bio != null ? bio : user.getBio()` 로 합쳐 넘깁니다. 동작은 맞지만, 빈 문자열이 `null` 이
+  아니라 `""` 로 저장되는 점이 나머지 둘과 다릅니다
+
 ### 스펙이 계약을 다 말하지 않으면 코드젠은 손해다
 
 #4 에서 배운 것입니다. springdoc 은 애노테이션이 없으면 **모든 프로퍼티를 optional 로** 뽑습니다.
@@ -293,5 +341,8 @@ grep -rn "api/v1" apps/web/src --include="*.ts" --include="*.tsx" | grep -v gene
 - **관리자 권한 개념이 없습니다.** 전원 `ROLE_USER` 라 `reports` 에 쌓인 신고를 볼 수단이
   없습니다 ([#28](https://github.com/seonghoho/LitMood/issues/28)). 그때까지의 절차는
   [09-milestone-5.md](09-milestone-5.md) M5-6 에 적어 뒀습니다
+- **검색 화면의 "이미 기록함" 조회에는 클라이언트 캐시가 없습니다.** 탭을 옮길 때마다 다시
+  나갑니다 — 자체 DB 조회라 싸지만, [#15](https://github.com/seonghoho/LitMood/issues/15) 의
+  react-query 훅이 들어오면 자연스럽게 캐시될 자리입니다
 - **인기 랭킹은 Redis 를 재시작하면 사라집니다.** 인메모리이고 기록 생성 시점에만 쌓이므로,
   다시 채워질 때까지 랜딩의 인기 섹션이 비어 있습니다. 배포 직후에도 마찬가지입니다
