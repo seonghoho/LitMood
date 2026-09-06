@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { css } from 'styled-system/css'
-import { stack } from 'styled-system/patterns'
+import { flex, grid, stack } from 'styled-system/patterns'
 import { ApiError } from '@litmood/api-client'
 import { RecordCard } from '@/features/record/RecordCard'
+import { RecordGridCard } from '@/features/record/RecordGridCard'
 import type { RecordPage, RecordResponse } from '@/features/record/types'
+import { readViewMode, writeViewMode, type ViewMode } from '@/features/record/view-mode'
+import { ViewModeToggle } from '@/features/record/ViewModeToggle'
 import { apiGet } from '@/shared/lib/api'
 import { useAuthStore } from '@/shared/store/auth'
 
@@ -37,6 +40,17 @@ export function ProfileRecords({
   const [records, setRecords] = useState(initialRecords)
   const [total, setTotal] = useState(initialTotal)
   const [blocked, setBlocked] = useState(false)
+  // 타임라인과 같은 선택을 쓴다 — 한 사람의 취향이 화면마다 다를 이유가 없다
+  const [viewMode, setViewMode] = useState<ViewMode>('list')
+
+  useEffect(() => {
+    setViewMode(readViewMode())
+  }, [])
+
+  const changeViewMode = (next: ViewMode) => {
+    setViewMode(next)
+    writeViewMode(next)
+  }
 
   useEffect(() => {
     if (!ready || !user) return
@@ -64,9 +78,16 @@ export function ProfileRecords({
       {/* 개수와 목록은 반드시 같은 출처에서 나와야 한다.
           제목을 서버 값으로, 목록을 클라이언트 값으로 두면 "기록 2"인데
           3개가 보이는 어긋남이 생긴다. */}
-      <h2 className={css({ textStyle: 'title' })}>
-        기록 <span className={css({ color: 'fg.muted' })}>{total}</span>
-      </h2>
+      <div className={flex({ gap: '3', alignItems: 'center', flexWrap: 'wrap' })}>
+        <h2 className={css({ textStyle: 'title' })}>
+          기록 <span className={css({ color: 'fg.muted' })}>{total}</span>
+        </h2>
+        {records.length > 0 && (
+          <div className={css({ ml: 'auto' })}>
+            <ViewModeToggle mode={viewMode} onChange={changeViewMode} />
+          </div>
+        )}
+      </div>
 
       {blocked ? (
         <p className={css({ textStyle: 'body', color: 'fg.muted' })}>
@@ -77,10 +98,36 @@ export function ProfileRecords({
           아직 공개된 기록이 없습니다.
         </p>
       ) : (
-        records.map((record) => (
-          <RecordCard key={record.id} record={record} own={user?.handle === handle} />
-        ))
+        <RecordList records={records} own={user?.handle === handle} mode={viewMode} />
       )}
+    </div>
+  )
+}
+
+/** 목록은 두 레이아웃을 각각 정적으로 정의해 고른다 (Panda 는 빌드 타임 추출기다). */
+function RecordList({
+  records,
+  own,
+  mode,
+}: {
+  records: RecordResponse[]
+  own: boolean
+  mode: ViewMode
+}) {
+  if (mode === 'grid') {
+    return (
+      <div className={grid({ columns: { base: 2, sm: 3, md: 4 }, gap: '4' })}>
+        {records.map((record) => (
+          <RecordGridCard key={record.id} record={record} own={own} />
+        ))}
+      </div>
+    )
+  }
+  return (
+    <div className={stack({ gap: '3' })}>
+      {records.map((record) => (
+        <RecordCard key={record.id} record={record} own={own} />
+      ))}
     </div>
   )
 }
