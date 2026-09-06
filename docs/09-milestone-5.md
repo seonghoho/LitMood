@@ -130,9 +130,27 @@ base 브랜치에 `openapi.yaml` 이 없으면 실패합니다 — `continue-on-
 
 ## M5-6. 운영 최소 요건
 
-- [ ] 신고 처리 화면 — `reports` 테이블에 쌓이기만 하고 **볼 방법이 없습니다**
-      최소한 관리자용 목록 + 상태 변경(PENDING → REVIEWED/DISMISSED)
-- [ ] 관리자 권한 개념 — 현재 모든 사용자가 동일 권한(`ROLE_USER`)입니다
+- [ ] 신고 처리 화면 + 관리자 권한 — [#28](https://github.com/seonghoho/LitMood/issues/28)
+      신고를 **접수하는** 길은 [#18](https://github.com/seonghoho/LitMood/issues/18) 에서 만들었지만
+      쌓인 것을 **볼 방법이 없습니다**. 현재 모든 사용자가 동일 권한(`ROLE_USER`)이라
+      관리자를 어떻게 임명할지부터 정해야 합니다
+
+  > **그때까지의 운영 절차.** 화면이 생기기 전에는 DB 를 직접 봅니다.
+  >
+  > ```bash
+  > docker exec -it litmood-postgres psql -U litmood -d litmood -c "
+  >   SELECT r.id, r.target_type, r.target_id, r.reason, r.detail, r.created_at
+  >   FROM reports r WHERE r.status = 'PENDING' ORDER BY r.created_at;"
+  > ```
+  >
+  > 대상은 `target_type` 에 따라 `records.id` / `collections.id` / `users.id` 입니다.
+  > 처리했으면 상태를 옮깁니다 — 같은 사람이 같은 대상을 다시 신고해도 접수되지 않으므로,
+  > `PENDING` 으로 두면 큐가 계속 쌓인 것처럼 보입니다.
+  >
+  > ```sql
+  > UPDATE reports SET status = 'REVIEWED', resolved_at = now() WHERE id = :id;
+  > ```
+
 - [ ] Rate limit — `docs/05-api-spec.md` 에 정책만 있고 **구현이 없습니다**
       (인증 600/min, 비인증 60/min, 검색 30/min — Redis 토큰 버킷)
 - [ ] 개인정보 처리방침 / 이용약관 페이지

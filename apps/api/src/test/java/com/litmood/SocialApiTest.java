@@ -13,6 +13,8 @@ import com.litmood.domain.model.RecordStatus;
 import com.litmood.domain.model.Report;
 import com.litmood.domain.model.Visibility;
 import com.litmood.interfaces.dto.AuthDtos.AuthResponse;
+import com.litmood.interfaces.dto.CollectionDtos.CollectionResponse;
+import com.litmood.interfaces.dto.CollectionDtos.CreateCollectionRequest;
 import com.litmood.interfaces.dto.RecordDtos.CreateRecordRequest;
 import com.litmood.interfaces.dto.RecordDtos.RecordPage;
 import com.litmood.interfaces.dto.RecordDtos.RecordResponse;
@@ -362,14 +364,86 @@ class SocialApiTest extends AuthenticatedTest {
         AuthResponse owner = signupNewUser();
         Long recordId = record(owner, isbnFor("신고 대상"), Visibility.PUBLIC).id();
 
-        ReportRequest request = new ReportRequest(
-                Report.ReportTarget.RECORD, recordId, Report.ReportReason.SPAM, "광고입니다");
+        ReportRequest request = new ReportRequest(Report.ReportReason.SPAM, "광고입니다");
+        String path = "/api/v1/records/" + recordId + "/report";
 
-        assertThat(authedMap(me, HttpMethod.POST, "/api/v1/reports", request).getStatusCode())
+        assertThat(authedMap(me, HttpMethod.POST, path, request).getStatusCode())
                 .isEqualTo(HttpStatus.ACCEPTED);
         // 두 번째도 사용자에겐 성공으로 보이지만 큐에는 쌓이지 않는다
-        assertThat(authedMap(me, HttpMethod.POST, "/api/v1/reports", request).getStatusCode())
+        assertThat(authedMap(me, HttpMethod.POST, path, request).getStatusCode())
                 .isEqualTo(HttpStatus.ACCEPTED);
+    }
+
+    @Test
+    @DisplayName("컬렉션은 slug 로, 사용자는 handle 로 신고한다 — 화면이 아는 주소가 그것뿐이다")
+    void reportsAddressedByPublicIdentifier() {
+        AuthResponse me = signupNewUser();
+        AuthResponse owner = signupNewUser();
+        String slug = authed(owner, HttpMethod.POST, "/api/v1/collections",
+                        new CreateCollectionRequest("신고 대상 컬렉션", null, Visibility.PUBLIC),
+                        CollectionResponse.class)
+                .getBody()
+                .slug();
+
+        ReportRequest request = new ReportRequest(Report.ReportReason.ABUSE, null);
+
+        assertThat(authedMap(me, HttpMethod.POST, "/api/v1/collections/" + slug + "/report", request)
+                        .getStatusCode())
+                .isEqualTo(HttpStatus.ACCEPTED);
+        assertThat(authedMap(
+                                me,
+                                HttpMethod.POST,
+                                "/api/v1/users/@" + owner.user().handle() + "/report",
+                                request)
+                        .getStatusCode())
+                .isEqualTo(HttpStatus.ACCEPTED);
+    }
+
+    @Test
+    @DisplayName("자기 자신은 신고할 수 없다")
+    void cannotReportSelf() {
+        AuthResponse me = signupNewUser();
+        Long recordId = record(me, isbnFor("내 기록"), Visibility.PUBLIC).id();
+        ReportRequest request = new ReportRequest(Report.ReportReason.SPAM, null);
+
+        assertThat(authedMap(me, HttpMethod.POST, "/api/v1/records/" + recordId + "/report", request)
+                        .getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(authedMap(me, HttpMethod.POST, "/api/v1/users/@" + me.user().handle() + "/report", request)
+                        .getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    @DisplayName("볼 수 없는 기록은 신고할 수도 없다 — 404 로 존재를 숨긴다")
+    void cannotReportInvisibleRecord() {
+        AuthResponse me = signupNewUser();
+        AuthResponse owner = signupNewUser();
+        Long recordId = record(owner, isbnFor("비공개 신고 대상"), Visibility.PRIVATE).id();
+
+        assertThat(authedMap(
+                                me,
+                                HttpMethod.POST,
+                                "/api/v1/records/" + recordId + "/report",
+                                new ReportRequest(Report.ReportReason.SPAM, null))
+                        .getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("사유는 필수다")
+    void reasonIsRequired() {
+        AuthResponse me = signupNewUser();
+        AuthResponse owner = signupNewUser();
+        Long recordId = record(owner, isbnFor("사유 없는 신고"), Visibility.PUBLIC).id();
+
+        assertThat(authedMap(
+                                me,
+                                HttpMethod.POST,
+                                "/api/v1/records/" + recordId + "/report",
+                                new ReportRequest(null, "사유 없음"))
+                        .getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     // ── 인기 랭킹 ───────────────────────────────────────────

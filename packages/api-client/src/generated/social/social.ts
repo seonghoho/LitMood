@@ -9,6 +9,36 @@ import { apiFetcher } from '../../fetcher'
 import type { BlockedUserResponse, LikeResponse, ReportRequest } from '.././model'
 
 /**
+ * @summary 사용자 신고
+ */
+export type reportUserResponse200 = {
+  data: void
+  status: 200
+}
+
+export type reportUserResponseSuccess = reportUserResponse200 & {
+  headers: Headers
+}
+export type reportUserResponse = reportUserResponseSuccess
+
+export const getReportUserUrl = (handle: string) => {
+  return `/api/v1/users/@${handle}/report`
+}
+
+export const reportUser = async (
+  handle: string,
+  reportRequest: ReportRequest,
+  options?: RequestInit,
+): Promise<reportUserResponse> => {
+  return apiFetcher<reportUserResponse>(getReportUserUrl(handle), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(reportRequest),
+  })
+}
+
+/**
  * 비대칭 관계 — 승인이 필요 없다. 이미 팔로우 중이면 멱등하게 성공한다.
  * @summary 팔로우
  */
@@ -111,27 +141,28 @@ export const unblock = async (handle: string, options?: RequestInit): Promise<un
 
 /**
  * 같은 대상을 반복 신고해도 한 번만 접수된다
- * @summary 신고
+ * @summary 기록 신고
  */
-export type reportResponse200 = {
+export type reportRecordResponse200 = {
   data: void
   status: 200
 }
 
-export type reportResponseSuccess = reportResponse200 & {
+export type reportRecordResponseSuccess = reportRecordResponse200 & {
   headers: Headers
 }
-export type reportResponse = reportResponseSuccess
+export type reportRecordResponse = reportRecordResponseSuccess
 
-export const getReportUrl = () => {
-  return `/api/v1/reports`
+export const getReportRecordUrl = (id: number) => {
+  return `/api/v1/records/${id}/report`
 }
 
-export const report = async (
+export const reportRecord = async (
+  id: number,
   reportRequest: ReportRequest,
   options?: RequestInit,
-): Promise<reportResponse> => {
-  return apiFetcher<reportResponse>(getReportUrl(), {
+): Promise<reportRecordResponse> => {
+  return apiFetcher<reportRecordResponse>(getReportRecordUrl(id), {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -190,6 +221,36 @@ export const unlikeRecord = async (
   return apiFetcher<unlikeRecordResponse>(getUnlikeRecordUrl(id), {
     ...options,
     method: 'DELETE',
+  })
+}
+
+/**
+ * @summary 컬렉션 신고
+ */
+export type reportCollectionResponse200 = {
+  data: void
+  status: 200
+}
+
+export type reportCollectionResponseSuccess = reportCollectionResponse200 & {
+  headers: Headers
+}
+export type reportCollectionResponse = reportCollectionResponseSuccess
+
+export const getReportCollectionUrl = (slug: string) => {
+  return `/api/v1/collections/${slug}/report`
+}
+
+export const reportCollection = async (
+  slug: string,
+  reportRequest: ReportRequest,
+  options?: RequestInit,
+): Promise<reportCollectionResponse> => {
+  return apiFetcher<reportCollectionResponse>(getReportCollectionUrl(slug), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(reportRequest),
   })
 }
 

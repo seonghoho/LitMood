@@ -8,6 +8,7 @@ import { BlockButton } from '@/features/social/BlockButton'
 import { FollowButton } from '@/features/social/FollowButton'
 import { ProfileCollections } from '@/features/social/ProfileCollections'
 import { ProfileRecords } from '@/features/social/ProfileRecords'
+import { ReportButton } from '@/features/social/ReportButton'
 import { decodeRouteParam } from '@/shared/lib/route-params'
 
 /**
@@ -132,6 +133,10 @@ export default async function ProfilePage({ params }: { params: Promise<{ handle
         <div className={flex({ gap: '2', alignItems: 'flex-start', flexWrap: 'wrap' })}>
           <FollowButton handle={profile.handle} />
           <BlockButton handle={profile.handle} />
+          <ReportButton
+            target={{ kind: 'user', handle: profile.handle, label: `@${profile.handle}` }}
+            ownerHandle={profile.handle}
+          />
         </div>
       </header>
 
