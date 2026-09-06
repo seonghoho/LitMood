@@ -3,7 +3,7 @@
 > **다음 세션 · 다른 PC 에서 이어받는 사람을 위한 문서입니다.**
 > 이 문서 하나로 지금까지의 상태를 파악하고 작업을 이어갈 수 있어야 합니다.
 
-최종 갱신: **2026-09-06** (M4 미배선분 점검, 이슈 #17~#20 등록 시점)
+최종 갱신: **2026-09-06** (이슈 #17~#20 · #22 완료 시점)
 
 ---
 
@@ -20,27 +20,25 @@
 | M4 소셜               | ✅   | `fc5a4e2`                                  |
 | M5 운영 준비          | ⬜   | — ([09-milestone-5.md](09-milestone-5.md)) |
 
-**동작하는 것**: 가입 → 검색 → 기록 → 타임라인 → 공개 프로필 → 컬렉션 공유(OG 이미지) →
-무드 탐색 → 팔로우 → 피드 → 기록 좋아요.
+**동작하는 것**: 랜딩(인기 콘텐츠) → 가입 → 검색 → 기록 → 타임라인(무드·별점·기간 필터) →
+공개 프로필 → 컬렉션 공유(OG 이미지) → 무드 탐색 → 팔로우 → 피드 → 좋아요(기록·컬렉션) →
+차단 → 신고.
 
-**M4 소셜의 절반은 화면이 없습니다.** API 는 `fc5a4e2` 에서 다 만들었는데 프론트 호출부가
-0건입니다 — 차단([#17](https://github.com/seonghoho/LitMood/issues/17)),
+**M4 소셜의 미배선분을 모두 붙였습니다** — 차단([#17](https://github.com/seonghoho/LitMood/issues/17)),
 신고([#18](https://github.com/seonghoho/LitMood/issues/18)),
 컬렉션 좋아요([#19](https://github.com/seonghoho/LitMood/issues/19)),
-인기 콘텐츠([#20](https://github.com/seonghoho/LitMood/issues/20)).
-넷 다 **프론트만으로는 끝나지 않습니다** — 응답 DTO 가 조회자별 상태를 말하지 않거나
-(`blockedByMe`, 컬렉션 `likeCount`/`likedByMe`), 신고 대상을 주소로 지정할 수 없거나
-(`targetId` 가 `Long` 인데 컬렉션은 slug·사용자는 handle), 순위 점수를 버리고 있습니다.
-자세한 것은 각 이슈에 적었습니다.
+랜딩·인기 콘텐츠([#20](https://github.com/seonghoho/LitMood/issues/20)).
+넷 다 화면만으로 끝나지 않았고 응답 계약을 함께 고쳤습니다. 자세한 것은 3절에 있습니다.
 
-랜딩 페이지(`app/page.tsx`)는 아직 **M0 스켈레톤**입니다. 비로그인 유입 경로인데 볼 것이 없습니다.
+**P0·P1 중 코드로 할 수 있는 일은 소진했습니다.** 남은 P0·P1 넷은 전부 코드 밖 결정이나
+외부 발급이 선행입니다 — 아래 3절을 보세요.
 
 **API 계약 파이프라인이 이어졌습니다** (ADR-008, [#4](https://github.com/seonghoho/LitMood/issues/4)).
 프론트의 모델 타입은 이제 백엔드 DTO 에서 생성됩니다 — `features/*/types.ts` 는 재수출일 뿐이니
 손으로 고치지 마세요. 호출 코드까지 옮기는 일은 [#15](https://github.com/seonghoho/LitMood/issues/15)
 로 남아 있습니다.
 
-**미완**: [GitHub Issues](https://github.com/seonghoho/LitMood/issues) 14건에 상세히 적어 두었습니다.
+**미완**: [GitHub Issues](https://github.com/seonghoho/LitMood/issues) 10건에 상세히 적어 두었습니다.
 아래 3절을 보세요.
 
 ---
@@ -116,68 +114,81 @@ pnpm verify            # typecheck + lint + format + build + 백엔드 테스트
 
 ### 우선순위 제안
 
-**① 먼저 처리해야 하는 것**
+**① 코드 밖 결정·발급이 선행인 것** — 지금 막혀 있는 것은 전부 여기입니다
 
-| 이슈                                                                          | 이유                                                                                       |
-| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| [#1 네이버 키 재발급](https://github.com/seonghoho/LitMood/issues/1)          | 보안. 코드 작업이 아니라 **개발자센터에서 재발급**하는 일입니다                            |
-| [#22 타임라인 무드·별점 필터](https://github.com/seonghoho/LitMood/issues/22) | P0 인데 반쯤 비어 있습니다. 쿼리는 완성돼 있어 **백엔드 선행 작업이 없는 유일한 건**입니다 |
+| 이슈                                                                               | 먼저 정하거나 받아야 하는 것                                             |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| [#1 네이버 키 재발급](https://github.com/seonghoho/LitMood/issues/1)               | 코드 작업이 아닙니다. **개발자센터에서 재발급**                          |
+| [#2 OAuth2 소셜 로그인](https://github.com/seonghoho/LitMood/issues/2)             | 카카오·구글 앱 키. 그리고 같은 이메일의 소셜/이메일 계정을 연결할지 말지 |
+| [#8 회원 탈퇴](https://github.com/seonghoho/LitMood/issues/8)                      | 탈퇴자의 공개 컬렉션 처리 정책. 30일 배치를 돌릴 스케줄러도 없습니다     |
+| [#28 신고 처리 화면 + 관리자 권한](https://github.com/seonghoho/LitMood/issues/28) | **관리자를 어떻게 임명할 것인가**. 지금 전원 `ROLE_USER` 입니다          |
 
-[#3 프로필 편집](https://github.com/seonghoho/LitMood/issues/3)은 완료했습니다 —
-`/settings` 화면, `PATCH /users/me`, presigned 아바타 업로드. 핸들 변경은 여전히 제외입니다
-(공개 URL 이 바뀌면 공유된 링크가 깨집니다). 아바타 **삭제**는 아직 없습니다.
+**② P2 — 착수 순서에 이유가 있습니다**
 
-[#5 기록 수정·삭제](https://github.com/seonghoho/LitMood/issues/5)도 완료했습니다 — 타임라인
-카드의 수정·삭제 진입점, 겸용이 된 `RecordDialog`, 삭제 확인. 다만 검색 결과에서 이미 기록한
-콘텐츠를 눌렀을 때 수정 모달을 여는 항목은 백엔드가 필요해
-[#11](https://github.com/seonghoho/LitMood/issues/11)로 분리했습니다.
+`#2` 가 들어오면 로그인 경로가 하나 더 생깁니다. `#9`(E2E)와 `#15`(호출 코드 이관)는 인증
+흐름을 정면으로 건드리므로 **`#2` 뒤에 하는 편이 다시 손대는 일을 줄입니다.**
 
-[#6 소비 맥락·스포일러](https://github.com/seonghoho/LitMood/issues/6)도 완료했습니다 —
-기록 다이얼로그의 접이식 "자세히" 섹션(언제·어디서·다시 본 횟수·스포일러), 스포일러 블러,
-타임라인 기간 필터.
+| 이슈                                                                          | 메모                                                                             |
+| ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| [#23 리스트 ↔ 그리드 뷰](https://github.com/seonghoho/LitMood/issues/23)      | F-04-03. **순수 프론트, 다른 작업과 안 겹칩니다** — 가벼운 시작점                |
+| [#24 아바타 삭제](https://github.com/seonghoho/LitMood/issues/24)             | 지울 수 없는 것보다 **교체할 때마다 이전 파일이 남는 쪽**이 큽니다               |
+| [#15 생성 호출 코드·훅 도입](https://github.com/seonghoho/LitMood/issues/15)  | `#4` 의 남은 절반. operationId 정리 → react-query 버전 정합 순서로 막혀 있습니다 |
+| [#9 무한 스크롤 + E2E](https://github.com/seonghoho/LitMood/issues/9)         | `#15` 뒤에 하면 `useInfiniteQuery` 가 생겨 일이 줄어듭니다                       |
+| [#7 컬렉션 편집 보강](https://github.com/seonghoho/LitMood/issues/7)          | 노트 **수정** API 가 없습니다 (도메인 `changeNote()` 는 이미 있음)               |
+| [#11 검색에서 기존 기록 열기](https://github.com/seonghoho/LitMood/issues/11) | `GET /records/me/by-content` 를 새로 만들어야 합니다                             |
 
-이 과정에서 **PATCH 가 넣지 않은 필드를 지우던 버그**를 고쳤습니다. 이제 규칙은 하나입니다 —
-넣지 않은 필드는 변경되지 않고, 지우려면 문자열은 빈 문자열, 별점은 `clearRating`,
-날짜는 `clearStartedAt`·`clearFinishedAt` 을 씁니다.
+**③ M5 운영 준비** — [09-milestone-5.md](09-milestone-5.md)에 상세 명세
 
-또 DB 에만 있고 도메인에는 없던 규칙(`started_at <= finished_at`)을 엔티티에도 넣었습니다.
-날짜 입력 화면이 생기면서 사용자가 순서를 뒤집으면 제약 위반이 그대로 500 이 될 수 있었습니다.
+### 이번 라운드에 끝난 것
 
-**② M4 의 미배선분** — 만들어 둔 API 에 화면을 붙이는 일. 넷 다 백엔드 선행 작업이 있습니다
+[#22 타임라인 필터](https://github.com/seonghoho/LitMood/issues/22) — 무드·별점 필터가 없어
+**P0 인 F-04-02 가 반쯤 비어 있었습니다.** 쿼리는 처음부터 여섯 가지를 다 받고 있었고 화면만
+셋을 보내고 있었습니다. 쿼리 조립은 순수 함수로 떼어 테스트했습니다(`timeline-filter.ts`) —
+무드는 정규화된 `name` 으로 대조되므로 `displayName` 을 보내면 **400 도 아니고 조용히 0건**이
+됩니다.
 
-| 이슈                                                                     | 선행 작업 (백엔드)                                                                              |
-| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| [#19 컬렉션 좋아요](https://github.com/seonghoho/LitMood/issues/19)      | `CollectionResponse` 에 `likeCount`·`likedByMe` 싣기. **가장 얇으니 여기서 시작하세요**         |
-| [#17 차단 UI](https://github.com/seonghoho/LitMood/issues/17)            | `PublicProfile` 에 `blockedByMe`. 차단이 공개 프로필·공개 기록 목록에는 적용되지 않는 것도 함께 |
-| [#18 신고 UI](https://github.com/seonghoho/LitMood/issues/18)            | `targetId` 로는 컬렉션·사용자를 지정할 수 없음. 신고를 **볼 방법**이 없는 것이 더 큰 문제       |
-| [#20 랜딩 + 인기 콘텐츠](https://github.com/seonghoho/LitMood/issues/20) | `/discover/popular` 이 순위 점수를 버림 + N+1. 클러스터에 Redis 가 없는 것이 선결               |
+[#19 컬렉션 좋아요](https://github.com/seonghoho/LitMood/issues/19) — 엔티티에는 `like_count` 가
+있는데 응답에 없었습니다. `CollectionSummary` 에는 `likeCount` 만 넣고 `likedByMe` 는 넣지
+않았습니다 — 그 목록이 나가는 공개 프로필은 인증 없이 캐시되므로 조회자별 값을 실으면 샙니다.
 
-**③ 그다음**
+[#17 차단](https://github.com/seonghoho/LitMood/issues/17) — `blockedByMe` 는 **단방향**입니다.
+가림은 양방향이어야 하지만 상대가 나를 차단한 것을 내가 풀 수는 없습니다. 그리고 백엔드는
+이미 404 를 주고 있었는데 **프론트가 그것을 삼키고 있었습니다** — 목록을 올려주기만 하고
+내려주지는 않아, 차단해도 상대 기록이 계속 보였습니다.
 
-| 이슈                                                                         | 이유                                                                          |
-| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| [#2 OAuth2 소셜 로그인](https://github.com/seonghoho/LitMood/issues/2)       | P0인데 미완. 카카오 앱 키 발급이 선행돼야 합니다                              |
-| [#8 회원 탈퇴](https://github.com/seonghoho/LitMood/issues/8)                | P1. 탈퇴자의 공개 컬렉션 처리 정책을 먼저 정해야 합니다                       |
-| [#15 생성 호출 코드·훅 도입](https://github.com/seonghoho/LitMood/issues/15) | #4 의 남은 절반. 모델 타입만 옮겨 놨고 호출은 아직 수동입니다                 |
-| [#23 리스트 ↔ 그리드 뷰](https://github.com/seonghoho/LitMood/issues/23)     | F-04-03(P1). 순수 프론트 작업이고 응답에 `coverUrl` 이 이미 있습니다          |
-| [#24 아바타 삭제](https://github.com/seonghoho/LitMood/issues/24)            | 지울 수 없는 것도 문제지만, **교체할 때마다 이전 파일이 스토리지에 남습니다** |
+[#18 신고](https://github.com/seonghoho/LitMood/issues/18) — 대상을 경로가 가리키게 바꿨습니다
+(`POST /records/{id}/report`, `/collections/{slug}/report`, `/users/@{handle}/report`).
+`targetId` 가 `Long` 이라 화면이 아는 slug·handle 로는 지정할 수 없었습니다. 접수된 신고를
+**보는** 화면은 [#28](https://github.com/seonghoho/LitMood/issues/28) 로 뗐고, 그때까지 DB 로
+확인하는 절차를 [09-milestone-5.md](09-milestone-5.md) M5-6 에 적었습니다.
 
-**④ M5 운영 준비** — [09-milestone-5.md](09-milestone-5.md)에 상세 명세
+[#20 랜딩·인기 콘텐츠](https://github.com/seonghoho/LitMood/issues/20) — Redis 는 점수를 이미
+주고 있었는데 `top()` 이 버리고 있었습니다. 무드 탐색의 `RankedContent` 와 합치지 않은 이유는
+그쪽만 평균 별점을 낼 수 있어서입니다 — 묶으면 영구히 null 인 필드가 계약에 남습니다.
+대신 화면 컴포넌트(`RankedContentList`)를 공유합니다.
+
+앞선 라운드에서 [#3 프로필 편집](https://github.com/seonghoho/LitMood/issues/3),
+[#5 기록 수정·삭제](https://github.com/seonghoho/LitMood/issues/5),
+[#6 소비 맥락·스포일러](https://github.com/seonghoho/LitMood/issues/6)를 끝냈습니다. 그때
+**PATCH 가 넣지 않은 필드를 지우던 버그**를 고쳐 규칙이 하나가 됐습니다 — 넣지 않은 필드는
+변경되지 않고, 지우려면 문자열은 빈 문자열, 별점은 `clearRating`, 날짜는 `clearStartedAt`·
+`clearFinishedAt` 을 씁니다. 아바타만 이 규칙에서 빠져 있습니다
+([#24](https://github.com/seonghoho/LitMood/issues/24)).
 
 ### 판단이 필요한 열린 질문
 
 작업을 이어받는 사람이 결정해야 할 것들입니다. 각 이슈에 배경을 적어 두었습니다.
+이번 라운드에 닫힌 질문(차단 범위, 신고 대상 주소 지정, 신고 열람 경로, 별점 필터의 처리)은
+결정한 내용과 함께 각 PR 에 남겼습니다.
 
-1. **소셜 계정과 이메일 계정의 연결 정책** (#2) — 자동 연결은 편하지만 계정 탈취 경로가 될 수 있습니다
-2. **react-query 를 올릴 것인가, orval 을 올릴 것인가** ([#15](https://github.com/seonghoho/LitMood/issues/15)) — 훅 생성이 이 버전 불일치에 막혀 있습니다. 어느 쪽을 움직일지는 확인이 필요합니다
-3. **핸들 변경 허용 여부** (#3) — 공개 URL 이 바뀌면 공유된 링크가 깨집니다
-4. **탈퇴자의 공개 컬렉션 처리** (#8) — 정책대로면 링크가 404 가 됩니다
-5. **차단을 어디까지 적용할 것인가** ([#17](https://github.com/seonghoho/LitMood/issues/17)) — 지금은 피드·기록 단건·컬렉션 조회만 막힙니다. 공개 프로필과 무드·인기 집계는 그대로 보입니다
-6. **신고 대상을 어떻게 주소 지정할 것인가** ([#18](https://github.com/seonghoho/LitMood/issues/18)) — 컬렉션 응답에 숫자 id 를 노출할지, `POST /collections/{slug}/report` 를 따로 둘지
-7. **신고를 누가 본다는 것인가** ([#18](https://github.com/seonghoho/LitMood/issues/18), M5-6) — 관리자 권한 개념이 없습니다. 화면을 만들지, 당분간 DB 를 직접 보는 절차를 문서화할지
-8. **Redis 를 클러스터 안에 둘 것인가** ([#20](https://github.com/seonghoho/LitMood/issues/20), M5-2) — DB 와 같은 결정입니다. 지금 `infra/k8s/base/` 에는 **둘 다 없습니다**
-9. **별점 필터가 별점 없는 기록을 지워도 되는가** ([#22](https://github.com/seonghoho/LitMood/issues/22)) — `rating >= x` 라 null 인 행이 탈락합니다. "별점이 아니라 맥락으로 기록한다" 는 이 서비스의 전제와 정면으로 부딪힙니다
-10. **기간 필터의 기준이 무엇인가** ([#22](https://github.com/seonghoho/LitMood/issues/22)) — 지금은 `created_at` 입니다. #6 에서 `startedAt`·`finishedAt` 을 받기 시작했으므로 사용자는 "언제 **봤는지**" 를 기대할 수 있습니다
+1. **소셜 계정과 이메일 계정의 연결 정책** ([#2](https://github.com/seonghoho/LitMood/issues/2)) — 자동 연결은 편하지만 계정 탈취 경로가 될 수 있습니다
+2. **관리자를 어떻게 임명할 것인가** ([#28](https://github.com/seonghoho/LitMood/issues/28)) — `users.role` 컬럼 / 환경변수 목록 / 별도 테이블. 운영자가 한둘인 동안은 환경변수가 무난해 보입니다
+3. **탈퇴자의 공개 컬렉션 처리** ([#8](https://github.com/seonghoho/LitMood/issues/8)) — 정책대로면 링크가 404 가 됩니다
+4. **Postgres·Redis 를 클러스터 안에 둘 것인가** ([#20](https://github.com/seonghoho/LitMood/issues/20), M5-2) — `infra/k8s/base/` 에는 **둘 다 없습니다.** 배포하면 인기 섹션이 빈 채로 보입니다
+5. **react-query 를 올릴 것인가, orval 을 올릴 것인가** ([#15](https://github.com/seonghoho/LitMood/issues/15)) — 훅 생성이 이 버전 불일치에 막혀 있습니다
+6. **기간 필터의 기준이 무엇인가** ([#22](https://github.com/seonghoho/LitMood/issues/22)) — 지금은 `created_at` 이라 라벨을 "기록한 날"로 정직하게 썼습니다. `startedAt`·`finishedAt` 기준으로 옮길지는 정해지지 않았습니다
+7. **아바타 고아 객체를 어떻게 치울 것인가** ([#24](https://github.com/seonghoho/LitMood/issues/24)) — 동기 삭제(실패는 로그만) / 주기적 청소. 후자는 스케줄러가 필요한데 `@Scheduled` 사용처가 0건입니다
+8. **핸들 변경 허용 여부** ([#3](https://github.com/seonghoho/LitMood/issues/3)) — 공개 URL 이 바뀌면 공유된 링크가 깨집니다
 
 ---
 
@@ -209,9 +220,10 @@ grep -rn "@\(Get\|Post\|Put\|Patch\|Delete\)Mapping" apps/api/src/main/java/com/
 grep -rn "api/v1" apps/web/src --include="*.ts" --include="*.tsx" | grep -v generated
 ```
 
-2026-09-06 기준 엔드포인트 28개 중 **8개가 미배선**이었습니다. 파라미터 단위로도 어긋납니다 —
-`GET /records/me` 는 `moods`·`minRating` 필터를 받는데 화면에는 없어서 F-04-02(P0)가
-반쯤 비어 있습니다 ([#22](https://github.com/seonghoho/LitMood/issues/22)).
+처음 세었을 때 엔드포인트 28개 중 **8개가 미배선**이었고, 파라미터 단위로도 어긋나 있었습니다 —
+`GET /records/me` 는 `moods`·`minRating` 을 받는데 화면이 안 보내 F-04-02(P0)가 반쯤 비어
+있었습니다. 지금은 모두 이어졌지만, **다음에 API 를 먼저 만들면 같은 일이 또 생깁니다.**
+마일스톤 체크는 "만들었나"만 말합니다.
 
 ### 이미 밟은 지뢰
 
@@ -262,4 +274,8 @@ grep -rn "api/v1" apps/web/src --include="*.ts" --include="*.tsx" | grep -v gene
 - **커스텀 메트릭이 0건입니다.** `MeterRegistry`·`@Timed`·`Counter` 사용처가 없어 기본 메트릭만
   나옵니다. 특히 `PopularityRanking` 은 실패를 조용히 삼키도록 설계돼 있어(의도) **Redis 가 죽어도
   아무도 모릅니다**. 로그도 아직 평문입니다
-- **관리자 권한 개념이 없습니다.** 전원 `ROLE_USER` 라 `reports` 에 쌓인 신고를 볼 수단이 없습니다
+- **관리자 권한 개념이 없습니다.** 전원 `ROLE_USER` 라 `reports` 에 쌓인 신고를 볼 수단이
+  없습니다 ([#28](https://github.com/seonghoho/LitMood/issues/28)). 그때까지의 절차는
+  [09-milestone-5.md](09-milestone-5.md) M5-6 에 적어 뒀습니다
+- **인기 랭킹은 Redis 를 재시작하면 사라집니다.** 인메모리이고 기록 생성 시점에만 쌓이므로,
+  다시 채워질 때까지 랜딩의 인기 섹션이 비어 있습니다. 배포 직후에도 마찬가지입니다
