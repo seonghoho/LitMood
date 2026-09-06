@@ -19,5 +19,6 @@ export interface CollectionSummary {
   coverUrl: CollectionSummaryCoverUrl
   visibility: Visibility
   itemCount: number
+  likeCount: number
   createdAt: string
 }

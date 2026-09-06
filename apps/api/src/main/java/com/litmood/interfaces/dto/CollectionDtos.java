@@ -61,8 +61,11 @@ public final class CollectionDtos {
             @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String coverUrl,
             @Schema(requiredMode = REQUIRED) Visibility visibility,
             @Schema(requiredMode = REQUIRED) int itemCount,
+            @Schema(requiredMode = REQUIRED) int likeCount,
             @Schema(requiredMode = REQUIRED) Instant createdAt) {
 
+        // 목록에는 likedByMe 를 싣지 않는다. 이 목록이 나가는 공개 프로필은 인증 없이
+        // SSR 되고 캐시되므로, 조회자별 값을 실으면 한 사람의 상태가 캐시로 새어 나간다.
         public static CollectionSummary from(Collection collection) {
             return new CollectionSummary(
                     collection.getSlug(),
@@ -71,6 +74,7 @@ public final class CollectionDtos {
                     collection.resolveCoverUrl(),
                     collection.getVisibility(),
                     collection.getItemCount(),
+                    collection.getLikeCount(),
                     collection.getCreatedAt());
         }
     }
@@ -85,11 +89,19 @@ public final class CollectionDtos {
             @Schema(requiredMode = REQUIRED) int itemCount,
             @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String ownerHandle,
             @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String ownerNickname,
+            @Schema(requiredMode = REQUIRED) int likeCount,
+            @Schema(requiredMode = REQUIRED) boolean likedByMe,
             @Schema(requiredMode = REQUIRED) List<CollectionItemResponse> items,
             @Schema(requiredMode = REQUIRED) Instant createdAt,
             @Schema(requiredMode = REQUIRED) Instant updatedAt) {
 
-        public static CollectionResponse from(Collection collection, String ownerHandle, String ownerNickname) {
+        /**
+         * @param likedByMe 조회자가 이 컬렉션에 좋아요를 눌렀는지. 비로그인 조회에서는 언제나 false 다 —
+         *     이 응답은 캐시되므로 호출부가 조회자별 값을 캐시에 실어 보내지 않도록 주의한다
+         *     (docs/03-architecture.md "캐싱과 개인화의 경계").
+         */
+        public static CollectionResponse from(
+                Collection collection, String ownerHandle, String ownerNickname, boolean likedByMe) {
             return new CollectionResponse(
                     collection.getSlug(),
                     collection.getTitle(),
@@ -99,6 +111,8 @@ public final class CollectionDtos {
                     collection.getItemCount(),
                     ownerHandle,
                     ownerNickname,
+                    collection.getLikeCount(),
+                    likedByMe,
                     collection.getItems().stream().map(CollectionItemResponse::from).toList(),
                     collection.getCreatedAt(),
                     collection.getUpdatedAt());

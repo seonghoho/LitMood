@@ -4,6 +4,7 @@ import com.litmood.domain.exception.ErrorCode;
 import com.litmood.domain.exception.LitmoodException;
 import com.litmood.domain.model.Collection;
 import com.litmood.domain.model.Content;
+import com.litmood.domain.model.LikeTarget;
 import com.litmood.domain.model.User;
 import com.litmood.domain.model.Visibility;
 import com.litmood.domain.repository.CollectionRepository;
@@ -46,7 +47,7 @@ public class CollectionService {
         String slug = uniqueSlug(request.title());
         Collection collection = Collection.create(
                 userId, slug, request.title(), request.description(), request.visibility());
-        return toResponse(collectionRepository.save(collection));
+        return toResponse(collectionRepository.save(collection), userId);
     }
 
     @Transactional(readOnly = true)
@@ -62,7 +63,7 @@ public class CollectionService {
             // 존재 여부를 숨기기 위해 403 이 아닌 404 로 응답한다
             throw LitmoodException.notFound("컬렉션");
         }
-        return toResponse(collection);
+        return toResponse(collection, viewerId);
     }
 
     @Transactional(readOnly = true)
@@ -94,7 +95,7 @@ public class CollectionService {
     public CollectionResponse update(Long userId, String slug, UpdateCollectionRequest request) {
         Collection collection = loadOwned(userId, slug);
         collection.edit(request.title(), request.description(), request.coverUrl(), request.visibility());
-        return toResponse(collection);
+        return toResponse(collection, userId);
     }
 
     @Transactional
@@ -108,21 +109,21 @@ public class CollectionService {
         // 기록하지 않은 콘텐츠도 담을 수 있다 (F-05 설계 원칙)
         Content content = contentService.resolveOrCreate(request.provider(), request.externalId());
         collection.addItem(content, request.note());
-        return toResponse(collection);
+        return toResponse(collection, userId);
     }
 
     @Transactional
     public CollectionResponse removeItem(Long userId, String slug, Long contentId) {
         Collection collection = loadOwned(userId, slug);
         collection.removeItem(contentId);
-        return toResponse(collection);
+        return toResponse(collection, userId);
     }
 
     @Transactional
     public CollectionResponse reorder(Long userId, String slug, ReorderItemsRequest request) {
         Collection collection = loadOwned(userId, slug);
         collection.reorder(request.contentIds());
-        return toResponse(collection);
+        return toResponse(collection, userId);
     }
 
     /**
@@ -149,11 +150,22 @@ public class CollectionService {
         return collection;
     }
 
-    private CollectionResponse toResponse(Collection collection) {
+    private CollectionResponse toResponse(Collection collection, Long viewerId) {
         User owner = userRepository.findById(collection.getUserId()).orElse(null);
         return CollectionResponse.from(
                 collection,
                 owner == null ? null : owner.getHandle(),
-                owner == null ? null : owner.getNickname());
+                owner == null ? null : owner.getNickname(),
+                likedBy(viewerId, collection));
+    }
+
+    /** 비로그인 조회에는 물어볼 것이 없다 — 쿼리를 아낀다. */
+    private boolean likedBy(Long viewerId, Collection collection) {
+        if (viewerId == null || collection.getId() == null) {
+            return false;
+        }
+        return socialRepository
+                .findLikedTargetIds(viewerId, LikeTarget.COLLECTION, List.of(collection.getId()))
+                .contains(collection.getId());
     }
 }

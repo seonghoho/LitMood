@@ -11,13 +11,25 @@ interface LikeResponse {
   likedByMe: boolean
 }
 
+/**
+ * 좋아요의 대상 (F-06-03 — 기록·컬렉션 둘 다).
+ * 기록은 id 로, 컬렉션은 공유 주소인 slug 로 가리킨다.
+ */
+export type LikeTarget = { kind: 'record'; id: number } | { kind: 'collection'; slug: string }
+
+function likePath(target: LikeTarget): string {
+  return target.kind === 'record'
+    ? `/api/v1/records/${target.id}/like`
+    : `/api/v1/collections/${encodeURIComponent(target.slug)}/like`
+}
+
 /** F-06-03 — 좋아요. 서버 응답으로 카운트를 확정해 낙관적 갱신의 어긋남을 없앤다. */
 export function LikeButton({
-  recordId,
+  target,
   initialCount,
   initialLiked,
 }: {
-  recordId: number
+  target: LikeTarget
   initialCount: number
   initialLiked: boolean
 }) {
@@ -30,11 +42,9 @@ export function LikeButton({
     if (!signedIn || busy) return
     setBusy(true)
     try {
-      const result = liked
-        ? await apiDelete(`/api/v1/records/${recordId}/like`).then(
-            () => ({ likeCount: count - 1, likedByMe: false }) as LikeResponse,
-          )
-        : await apiPost<LikeResponse>(`/api/v1/records/${recordId}/like`)
+      const path = likePath(target)
+      // 취소도 갱신된 개수를 돌려준다 — 직접 빼면 다른 사람이 그사이 누른 것을 놓친다
+      const result = liked ? await apiDelete<LikeResponse>(path) : await apiPost<LikeResponse>(path)
       setCount(result.likeCount)
       setLiked(result.likedByMe)
     } catch (error) {

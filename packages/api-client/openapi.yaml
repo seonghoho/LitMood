@@ -1203,6 +1203,11 @@ components:
           type:
           - string
           - "null"
+        likeCount:
+          type: integer
+          format: int32
+        likedByMe:
+          type: boolean
         items:
           type: array
           items:
@@ -1219,6 +1224,8 @@ components:
       - description
       - itemCount
       - items
+      - likeCount
+      - likedByMe
       - ownerHandle
       - ownerNickname
       - slug
@@ -1494,6 +1501,9 @@ components:
         itemCount:
           type: integer
           format: int32
+        likeCount:
+          type: integer
+          format: int32
         createdAt:
           type: string
           format: date-time
@@ -1502,6 +1512,7 @@ components:
       - createdAt
       - description
       - itemCount
+      - likeCount
       - slug
       - title
       - visibility
