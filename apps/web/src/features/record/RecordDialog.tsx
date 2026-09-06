@@ -44,7 +44,8 @@ export function RecordDialog({
   /** 넘기면 수정 모드가 된다 */
   record?: RecordResponse
   onClose: () => void
-  onCreated?: (externalId: string) => void
+  /** 만든 기록을 그대로 넘긴다 — 호출부가 곧바로 "수정" 으로 바꿔 달 수 있다 (#11) */
+  onCreated?: (record: RecordResponse) => void
   onUpdated?: (record: RecordResponse) => void
 }) {
   const editing = record != null
@@ -128,7 +129,7 @@ export function RecordDialog({
           : record
         onUpdated?.(updated)
       } else {
-        await apiPost('/api/v1/records', {
+        const created = await apiPost<RecordResponse>('/api/v1/records', {
           provider: content!.provider,
           externalId: content!.externalId,
           status,
@@ -142,7 +143,7 @@ export function RecordDialog({
           finishedAt: finishedAt || null,
           repeatCount,
         })
-        onCreated?.(content!.externalId)
+        onCreated?.(created)
       }
       onClose()
     } catch (e) {

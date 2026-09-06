@@ -10,6 +10,8 @@ import org.springframework.stereotype.Repository;
 
 interface ContentJpaRepository extends JpaRepository<Content, Long> {
     Optional<Content> findByProviderAndExternalId(ProviderType provider, String externalId);
+
+    List<Content> findAllByProviderAndExternalIdIn(ProviderType provider, List<String> externalIds);
 }
 
 @Repository
@@ -34,6 +36,13 @@ class ContentRepositoryImpl implements ContentRepository {
     @Override
     public Optional<Content> findByProviderAndExternalId(ProviderType provider, String externalId) {
         return jpa.findByProviderAndExternalId(provider, externalId);
+    }
+
+    @Override
+    public List<Content> findAllByProviderAndExternalIds(ProviderType provider, List<String> externalIds) {
+        return externalIds.isEmpty()
+                ? List.of()
+                : jpa.findAllByProviderAndExternalIdIn(provider, externalIds);
     }
 
     @Override

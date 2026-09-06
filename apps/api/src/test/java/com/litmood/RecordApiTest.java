@@ -478,6 +478,84 @@ class RecordApiTest extends AuthenticatedTest {
                 .containsEntry("isSpoiler", true);
     }
 
+    @Test
+    @DisplayName("콘텐츠로 내 기록을 찾으면 기록한 것만 돌아온다 (#11)")
+    void findsMyRecordsByContent() {
+        AuthResponse me = signupNewUser();
+        stubBook("5100000000001", "기록한 책");
+        stubBook("5100000000002", "안 기록한 책");
+        createRecord(me, requestFor("5100000000001", Visibility.PUBLIC));
+
+        List<RecordResponse> found = byContent(
+                me, "NAVER_BOOK:5100000000001", "NAVER_BOOK:5100000000002");
+
+        // 기록이 없는 쪽은 404 가 아니라 그냥 빠진다 — 한 화면에 실패를 여러 번 내지 않는다
+        assertThat(found).hasSize(1);
+        assertThat(found.get(0).content().externalId()).isEqualTo("5100000000001");
+        assertThat(found.get(0).content().title()).isEqualTo("기록한 책");
+    }
+
+    @Test
+    @DisplayName("남의 기록은 콘텐츠로 찾아도 돌아오지 않는다")
+    void byContentReturnsOnlyMyRecords() {
+        AuthResponse owner = signupNewUser();
+        AuthResponse stranger = signupNewUser();
+        stubBook("5200000000001", "남이 기록한 책");
+        createRecord(owner, requestFor("5200000000001", Visibility.PUBLIC));
+
+        assertThat(byContent(stranger, "NAVER_BOOK:5200000000001")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("삭제한 기록은 콘텐츠로 찾아도 돌아오지 않는다")
+    void byContentSkipsDeletedRecords() {
+        AuthResponse me = signupNewUser();
+        stubBook("5300000000001", "지운 기록의 책");
+        Long recordId = createRecord(me, requestFor("5300000000001", Visibility.PUBLIC))
+                .getBody()
+                .id();
+        authedMap(me, HttpMethod.DELETE, "/api/v1/records/" + recordId, null);
+
+        // 남아 있으면 화면이 "수정" 을 띄우고, 누르면 없는 기록을 고치려 든다
+        assertThat(byContent(me, "NAVER_BOOK:5300000000001")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("형식이 잘못된 콘텐츠 지정은 400 으로 거절한다")
+    void byContentRejectsMalformedRefs() {
+        AuthResponse me = signupNewUser();
+
+        assertThat(byContentStatus(me, "9788937473135")).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(byContentStatus(me, "UNKNOWN_PROVIDER:123")).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    private List<RecordResponse> byContent(AuthResponse auth, String... refs) {
+        ResponseEntity<List<RecordResponse>> response = rest.exchange(
+                URI.create(rest.getRootUri() + byContentQuery(refs)),
+                HttpMethod.GET,
+                new HttpEntity<>(bearer(auth)),
+                new ParameterizedTypeReference<List<RecordResponse>>() {});
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        return response.getBody();
+    }
+
+    private HttpStatus byContentStatus(AuthResponse auth, String... refs) {
+        return (HttpStatus) rest.exchange(
+                        URI.create(rest.getRootUri() + byContentQuery(refs)),
+                        HttpMethod.GET,
+                        new HttpEntity<>(bearer(auth)),
+                        new ParameterizedTypeReference<Map<String, Object>>() {})
+                .getStatusCode();
+    }
+
+    private String byContentQuery(String... refs) {
+        StringBuilder query = new StringBuilder("/api/v1/records/me/by-content?_=1");
+        for (String ref : refs) {
+            query.append("&refs=").append(URLEncoder.encode(ref, StandardCharsets.UTF_8));
+        }
+        return query.toString();
+    }
+
     private ResponseEntity<RecordResponse> createRecord(AuthResponse auth, CreateRecordRequest request) {
         return authed(auth, HttpMethod.POST, "/api/v1/records", request, RecordResponse.class);
     }

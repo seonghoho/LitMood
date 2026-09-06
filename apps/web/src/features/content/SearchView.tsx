@@ -4,7 +4,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { css } from 'styled-system/css'
 import { flex, stack } from 'styled-system/patterns'
 import { ApiError } from '@litmood/api-client'
+import { buildByContentPath, contentKey, mergeMyRecords } from '@/features/record/my-records'
 import { RecordDialog } from '@/features/record/RecordDialog'
+import type { RecordResponse } from '@/features/record/types'
 import { apiGet } from '@/shared/lib/api'
 import { useAuthStore } from '@/shared/store/auth'
 import { ContentCard } from './ContentCard'
@@ -32,7 +34,8 @@ export function SearchView() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   // 화면 전환 없이 기록을 마치기 위한 다이얼로그 상태 (F-03-01)
   const [recording, setRecording] = useState<ContentSummary | null>(null)
-  const [recorded, setRecorded] = useState<Set<string>>(new Set())
+  // 이미 기록한 콘텐츠 → 그 기록. 검색 응답에는 실을 수 없어 따로 묻는다 (#11)
+  const [myRecords, setMyRecords] = useState<Map<string, RecordResponse>>(new Map())
 
   const signedIn = useAuthStore((state) => state.user !== null)
 
@@ -78,7 +81,34 @@ export function SearchView() {
     return Object.fromEntries(entries) as Record<ContentType, number>
   }, [data])
 
-  const items = data?.results?.[activeType] ?? []
+  // 조회 effect 의 의존성이라 렌더마다 새 배열이 되면 요청이 끝없이 반복된다
+  const items = useMemo(() => data?.results?.[activeType] ?? [], [data, activeType])
+
+  /**
+   * 화면에 보이는 것만 묻는다 (#11). 결과 전체를 한 번에 물으면 탭 셋을 다 실어
+   * 상한(50)에 닿고, 보지도 않을 탭까지 조회하게 된다.
+   *
+   * 실패는 삼킨다 — 없으면 "기록" 버튼이 보일 뿐이고, 중복이면 서버가 409 로 막는다.
+   */
+  useEffect(() => {
+    if (!signedIn) {
+      setMyRecords(new Map())
+      return
+    }
+    const path = buildByContentPath(items)
+    if (!path) return
+
+    const controller = new AbortController()
+    apiGet<RecordResponse[]>(path, { signal: controller.signal })
+      .then((records) => {
+        if (controller.signal.aborted) return
+        setMyRecords((previous) => mergeMyRecords(previous, items, records))
+      })
+      .catch(() => {})
+
+    return () => controller.abort()
+  }, [items, signedIn])
+
   const failedLabels = (data?.failedProviders ?? []).map((p) => PROVIDER_CONTENT_LABEL[p])
 
   return (
@@ -180,8 +210,10 @@ export function SearchView() {
           </p>
         )}
         {items.map((content) => {
-          const key = `${content.provider}:${content.externalId}`
-          const done = recorded.has(content.externalId)
+          const key = contentKey(content)
+          // 이미 기록했다면 새로 만들 수 없다(불변식 1). 생성 모달을 열어 409 를 받게
+          // 두는 대신 그 기록의 수정으로 보낸다.
+          const mine = myRecords.get(key)
           return (
             <ContentCard
               key={key}
@@ -189,7 +221,6 @@ export function SearchView() {
               action={
                 <button
                   type="button"
-                  disabled={done}
                   onClick={() => setRecording(content)}
                   className={css({
                     textStyle: 'caption',
@@ -198,12 +229,11 @@ export function SearchView() {
                     rounded: 'md',
                     cursor: 'pointer',
                     whiteSpace: 'nowrap',
-                    bg: done ? 'bg.subtle' : 'brand.default',
-                    color: done ? 'fg.muted' : 'fg.onAccent',
-                    _disabled: { cursor: 'default' },
+                    bg: mine ? 'bg.subtle' : 'brand.default',
+                    color: mine ? 'fg.default' : 'fg.onAccent',
                   })}
                 >
-                  {done ? '기록됨' : signedIn ? '기록' : '로그인 후 기록'}
+                  {mine ? '수정' : signedIn ? '기록' : '로그인 후 기록'}
                 </button>
               }
             />
@@ -215,8 +245,10 @@ export function SearchView() {
         (signedIn ? (
           <RecordDialog
             content={recording}
+            record={myRecords.get(contentKey(recording))}
             onClose={() => setRecording(null)}
-            onCreated={(externalId) => setRecorded((prev) => new Set(prev).add(externalId))}
+            onCreated={(created) => setMyRecords((prev) => mergeMyRecords(prev, [], [created]))}
+            onUpdated={(updated) => setMyRecords((prev) => mergeMyRecords(prev, [], [updated]))}
           />
         ) : (
           <SignInPrompt onClose={() => setRecording(null)} />

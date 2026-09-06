@@ -31,6 +31,11 @@ interface RecordJpaRepository extends JpaRepository<Record, Long> {
     Optional<Record> findActiveByUserAndContent(@Param("userId") Long userId, @Param("contentId") Long contentId);
 
     @EntityGraph(attributePaths = {"content", "moods", "author"})
+    @Query("SELECT r FROM Record r WHERE r.userId = :userId AND r.content.id IN :contentIds AND r.deletedAt IS NULL")
+    List<Record> findActiveByUserAndContents(
+            @Param("userId") Long userId, @Param("contentIds") List<Long> contentIds);
+
+    @EntityGraph(attributePaths = {"content", "moods", "author"})
     @Query("SELECT r FROM Record r WHERE r.id IN :ids ORDER BY r.createdAt DESC, r.id DESC")
     List<Record> findAllWithDetails(@Param("ids") List<Long> ids);
 }
@@ -63,6 +68,12 @@ class RecordRepositoryImpl implements RecordRepository {
     @Override
     public Optional<Record> findActiveByUserAndContent(Long userId, Long contentId) {
         return jpa.findActiveByUserAndContent(userId, contentId);
+    }
+
+    @Override
+    public List<Record> findActiveByUserAndContents(Long userId, List<Long> contentIds) {
+        // IN () 은 SQL 문법 오류다. 빈 목록은 질의 없이 끝낸다.
+        return contentIds.isEmpty() ? List.of() : jpa.findActiveByUserAndContents(userId, contentIds);
     }
 
     @Override
