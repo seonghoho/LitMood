@@ -3,7 +3,7 @@
 > **다음 세션 · 다른 PC 에서 이어받는 사람을 위한 문서입니다.**
 > 이 문서 하나로 지금까지의 상태를 파악하고 작업을 이어갈 수 있어야 합니다.
 
-최종 갱신: **2026-09-06** (이슈 #17~#20 · #22 완료 시점)
+최종 갱신: **2026-09-06** (이슈 #17~#20 · #22 · #23 · #24 완료 시점)
 
 ---
 
@@ -30,15 +30,16 @@
 랜딩·인기 콘텐츠([#20](https://github.com/seonghoho/LitMood/issues/20)).
 넷 다 화면만으로 끝나지 않았고 응답 계약을 함께 고쳤습니다. 자세한 것은 3절에 있습니다.
 
-**P0·P1 중 코드로 할 수 있는 일은 소진했습니다.** 남은 P0·P1 넷은 전부 코드 밖 결정이나
-외부 발급이 선행입니다 — 아래 3절을 보세요.
+**지금 바로 집어 들 수 있는 일은 남아 있지 않습니다.** 남은 8건은 전부 선행 조건이 있습니다 —
+넷은 코드 밖 결정이나 외부 발급이고, 넷은 다른 작업이나 새 API 가 앞에 있습니다.
+아래 3절에 무엇이 막고 있는지 적었습니다.
 
 **API 계약 파이프라인이 이어졌습니다** (ADR-008, [#4](https://github.com/seonghoho/LitMood/issues/4)).
 프론트의 모델 타입은 이제 백엔드 DTO 에서 생성됩니다 — `features/*/types.ts` 는 재수출일 뿐이니
 손으로 고치지 마세요. 호출 코드까지 옮기는 일은 [#15](https://github.com/seonghoho/LitMood/issues/15)
 로 남아 있습니다.
 
-**미완**: [GitHub Issues](https://github.com/seonghoho/LitMood/issues) 10건에 상세히 적어 두었습니다.
+**미완**: [GitHub Issues](https://github.com/seonghoho/LitMood/issues) 8건에 상세히 적어 두었습니다.
 아래 3절을 보세요.
 
 ---
@@ -123,19 +124,20 @@ pnpm verify            # typecheck + lint + format + build + 백엔드 테스트
 | [#8 회원 탈퇴](https://github.com/seonghoho/LitMood/issues/8)                      | 탈퇴자의 공개 컬렉션 처리 정책. 30일 배치를 돌릴 스케줄러도 없습니다     |
 | [#28 신고 처리 화면 + 관리자 권한](https://github.com/seonghoho/LitMood/issues/28) | **관리자를 어떻게 임명할 것인가**. 지금 전원 `ROLE_USER` 입니다          |
 
-**② P2 — 착수 순서에 이유가 있습니다**
+**② P2 — 남은 넷. 착수 순서에 이유가 있습니다**
 
 `#2` 가 들어오면 로그인 경로가 하나 더 생깁니다. `#9`(E2E)와 `#15`(호출 코드 이관)는 인증
 흐름을 정면으로 건드리므로 **`#2` 뒤에 하는 편이 다시 손대는 일을 줄입니다.**
 
-| 이슈                                                                          | 메모                                                                             |
-| ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| [#23 리스트 ↔ 그리드 뷰](https://github.com/seonghoho/LitMood/issues/23)      | F-04-03. **순수 프론트, 다른 작업과 안 겹칩니다** — 가벼운 시작점                |
-| [#24 아바타 삭제](https://github.com/seonghoho/LitMood/issues/24)             | 지울 수 없는 것보다 **교체할 때마다 이전 파일이 남는 쪽**이 큽니다               |
-| [#15 생성 호출 코드·훅 도입](https://github.com/seonghoho/LitMood/issues/15)  | `#4` 의 남은 절반. operationId 정리 → react-query 버전 정합 순서로 막혀 있습니다 |
-| [#9 무한 스크롤 + E2E](https://github.com/seonghoho/LitMood/issues/9)         | `#15` 뒤에 하면 `useInfiniteQuery` 가 생겨 일이 줄어듭니다                       |
-| [#7 컬렉션 편집 보강](https://github.com/seonghoho/LitMood/issues/7)          | 노트 **수정** API 가 없습니다 (도메인 `changeNote()` 는 이미 있음)               |
-| [#11 검색에서 기존 기록 열기](https://github.com/seonghoho/LitMood/issues/11) | `GET /records/me/by-content` 를 새로 만들어야 합니다                             |
+`#7` 과 `#11` 은 백엔드를 새로 만들면 되므로 **`#2` 를 기다리지 않아도 됩니다.**
+지금 이어서 한다면 이 둘 중 하나입니다.
+
+| 이슈                                                                          | 앞에 있는 것                                                                            |
+| ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| [#7 컬렉션 편집 보강](https://github.com/seonghoho/LitMood/issues/7)          | `PATCH /collections/{slug}/items/{contentId}` 신설 (도메인 `changeNote()` 는 이미 있음) |
+| [#11 검색에서 기존 기록 열기](https://github.com/seonghoho/LitMood/issues/11) | `GET /records/me/by-content` 신설. 검색 응답에 넣으면 캐시로 샙니다                     |
+| [#15 생성 호출 코드·훅 도입](https://github.com/seonghoho/LitMood/issues/15)  | `#2`. 그리고 operationId 정리 → react-query 버전 정합 순서로 막혀 있습니다              |
+| [#9 무한 스크롤 + E2E](https://github.com/seonghoho/LitMood/issues/9)         | `#15`. 뒤에 하면 `useInfiniteQuery` 가 생겨 일이 줄어듭니다                             |
 
 **③ M5 운영 준비** — [09-milestone-5.md](09-milestone-5.md)에 상세 명세
 
@@ -167,6 +169,19 @@ pnpm verify            # typecheck + lint + format + build + 백엔드 테스트
 그쪽만 평균 별점을 낼 수 있어서입니다 — 묶으면 영구히 null 인 필드가 계약에 남습니다.
 대신 화면 컴포넌트(`RankedContentList`)를 공유합니다.
 
+[#23 리스트 ↔ 그리드 뷰](https://github.com/seonghoho/LitMood/issues/23) — 표지가 곧 식별자인
+콘텐츠라 커버 그리드가 "내가 뭘 봤더라"를 빨리 답해 줍니다. 선택은 `localStorage` 에 두고
+타임라인·프로필이 함께 씁니다. 그리드에는 한줄평을 싣지 않아 **스포일러가 새어 나갈 일도
+없습니다.** 화면에서 두 가지를 고쳤습니다 — 리셋의 `img { height: auto }` 가 유틸리티를 이겨
+커버가 상자를 안 채우던 것(CLAUDE.md 함정 표에 추가), 죽은 커버 URL 이 깨진 이미지로 보이던 것.
+
+[#24 아바타 삭제](https://github.com/seonghoho/LitMood/issues/24) — "지울 수 없다"는 문제의
+절반이었습니다. **프론트도 비울 때 `null` 을 보내고 있었고, 서버는 `null` 을 "변경 없음"으로
+읽습니다** — 백엔드만 고쳤으면 지운 것이 조용히 남았을 겁니다. 그리고 지울 때뿐 아니라
+**교체할 때마다 이전 객체가 스토리지에 남고 있었습니다.** 정리 실패는 삼키고 warn 만 남깁니다
+(MinIO 를 내려 두고 확인했습니다 — PATCH 는 200 으로 끝나고 로그에 남습니다).
+주기적 청소로 가지 않은 이유는 스케줄러가 없어서입니다 — `#8` 이 부딪히는 것과 같은 벽입니다.
+
 앞선 라운드에서 [#3 프로필 편집](https://github.com/seonghoho/LitMood/issues/3),
 [#5 기록 수정·삭제](https://github.com/seonghoho/LitMood/issues/5),
 [#6 소비 맥락·스포일러](https://github.com/seonghoho/LitMood/issues/6)를 끝냈습니다. 그때
@@ -187,8 +202,7 @@ pnpm verify            # typecheck + lint + format + build + 백엔드 테스트
 4. **Postgres·Redis 를 클러스터 안에 둘 것인가** ([#20](https://github.com/seonghoho/LitMood/issues/20), M5-2) — `infra/k8s/base/` 에는 **둘 다 없습니다.** 배포하면 인기 섹션이 빈 채로 보입니다
 5. **react-query 를 올릴 것인가, orval 을 올릴 것인가** ([#15](https://github.com/seonghoho/LitMood/issues/15)) — 훅 생성이 이 버전 불일치에 막혀 있습니다
 6. **기간 필터의 기준이 무엇인가** ([#22](https://github.com/seonghoho/LitMood/issues/22)) — 지금은 `created_at` 이라 라벨을 "기록한 날"로 정직하게 썼습니다. `startedAt`·`finishedAt` 기준으로 옮길지는 정해지지 않았습니다
-7. **아바타 고아 객체를 어떻게 치울 것인가** ([#24](https://github.com/seonghoho/LitMood/issues/24)) — 동기 삭제(실패는 로그만) / 주기적 청소. 후자는 스케줄러가 필요한데 `@Scheduled` 사용처가 0건입니다
-8. **핸들 변경 허용 여부** ([#3](https://github.com/seonghoho/LitMood/issues/3)) — 공개 URL 이 바뀌면 공유된 링크가 깨집니다
+7. **핸들 변경 허용 여부** ([#3](https://github.com/seonghoho/LitMood/issues/3)) — 공개 URL 이 바뀌면 공유된 링크가 깨집니다
 
 ---
 
@@ -265,7 +279,9 @@ grep -rn "api/v1" apps/web/src --include="*.ts" --include="*.tsx" | grep -v gene
 - **K8s 매니페스트는 `kustomize build` 로 문법만 검증했습니다.** 실제 클러스터에 배포한 적 없습니다
 - **프론트엔드 테스트는 순수 로직만 있습니다.** jsdom·testing-library 가 없어 컴포넌트 렌더링은
   검증하지 못하고 브라우저로 수동 확인합니다 ([이슈 #9](https://github.com/seonghoho/LitMood/issues/9))
-- **아바타 업로드는 로컬 MinIO 로만 검증했습니다.** 실제 S3 나 프로덕션 버킷 정책은 확인하지 않았습니다
+- **아바타는 로컬 MinIO 로만 검증했습니다.** 실제 S3 나 프로덕션 버킷 정책은 확인한 적이 없습니다.
+  특히 `#24` 로 **삭제**가 생겼는데 presign 은 되고 `s3:DeleteObject` 권한은 없는 구성이 흔합니다 —
+  그 경우 조용히 실패하고(설계상 삼킵니다) 객체만 쌓입니다. 배포 전 버킷 정책을 확인하세요
 - **성능·부하 테스트를 하지 않았습니다.** NFR-01(p95 < 300ms)은 측정되지 않은 목표입니다
 - **`infra/k8s/base/` 에 Postgres 도 Redis 도 없습니다.** api·web 의 Deployment·Service·Ingress·HPA·
   ConfigMap 뿐입니다. 지금 상태로 배포하면 검색 캐시·리프레시 토큰·인기 랭킹이 갈 곳이 없습니다
