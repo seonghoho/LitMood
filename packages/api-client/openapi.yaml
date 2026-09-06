@@ -847,7 +847,8 @@ paths:
       tags:
       - Discover
       summary: 인기 콘텐츠
-      description: 기간 내 기록 수 기준. Redis Sorted Set 으로 집계한다.
+      description: "기간 내 기록 수 기준. Redis Sorted Set 으로 집계한다. period 는 week(기본) 또는 month\
+        \ 이고, 그 밖의 값은 week 로 본다."
       operationId: popular
       parameters:
       - name: period
@@ -871,7 +872,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/ContentRef"
+                  $ref: "#/components/schemas/PopularContent"
       security: []
   /api/v1/contents/search:
     get:
@@ -1619,6 +1620,18 @@ components:
           format: double
       required:
       - averageRating
+      - content
+      - recordCount
+    PopularContent:
+      type: object
+      description: 기간 내 기록 수 기준 인기 콘텐츠
+      properties:
+        content:
+          $ref: "#/components/schemas/ContentRef"
+        recordCount:
+          type: integer
+          format: int64
+      required:
       - content
       - recordCount
     ContentSummary:

@@ -49,8 +49,13 @@ public class PopularityRanking {
         }
     }
 
-    /** 점수 높은 순 콘텐츠 id. 결과가 비면 호출부가 빈 목록을 반환하면 된다. */
-    public List<Long> top(Period period, int limit) {
+    /**
+     * 점수 높은 순. 결과가 비면 호출부가 빈 목록을 반환하면 된다.
+     *
+     * <p>점수(기록 수)를 함께 돌려준다 — 순위만 있고 근거가 없으면 화면에서
+     * 그냥 콘텐츠 목록과 구분되지 않는다.
+     */
+    public List<Scored> top(Period period, int limit) {
         try {
             String key = period == Period.WEEK ? weekKey(LocalDate.now()) : monthKey(LocalDate.now());
             Set<ZSetOperations.TypedTuple<String>> tuples =
@@ -59,18 +64,23 @@ public class PopularityRanking {
             if (tuples == null || tuples.isEmpty()) {
                 return List.of();
             }
-            List<Long> ids = new ArrayList<>(tuples.size());
+            List<Scored> scored = new ArrayList<>(tuples.size());
             for (ZSetOperations.TypedTuple<String> tuple : tuples) {
                 if (tuple.getValue() != null) {
-                    ids.add(Long.valueOf(tuple.getValue()));
+                    // incrementScore 로만 쌓이므로 점수는 정수다
+                    long count = tuple.getScore() == null ? 0L : Math.round(tuple.getScore());
+                    scored.add(new Scored(Long.valueOf(tuple.getValue()), count));
                 }
             }
-            return ids;
+            return scored;
         } catch (Exception e) {
             log.warn("인기 랭킹 조회 실패 — 빈 목록을 반환합니다: {}", e.getMessage());
             return List.of();
         }
     }
+
+    /** 콘텐츠 id 와 그 기간의 기록 수. */
+    public record Scored(Long contentId, long count) {}
 
     private void increment(String key, Long contentId, Duration ttl) {
         redis.opsForZSet().incrementScore(key, String.valueOf(contentId), 1);
