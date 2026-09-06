@@ -73,3 +73,28 @@ describe('buildProfilePatch', () => {
     expect(buildProfilePatch(withAvatar, { ...withAvatar })).toEqual({})
   })
 })
+
+describe('buildProfilePatch — 아바타 지우기 (이슈 #24)', () => {
+  const saved: ProfileDraft = {
+    nickname: '나',
+    bio: '',
+    defaultVisibility: 'PUBLIC',
+    avatarUrl: 'https://storage.example/litmood/avatars/1/a.webp',
+  }
+
+  it('아바타를 비우면 null 이 아니라 빈 문자열을 보낸다', () => {
+    // null 을 보내면 서버가 "변경 없음"으로 읽어 아바타가 그대로 남는다
+    expect(buildProfilePatch(saved, { ...saved, avatarUrl: null })).toEqual({ avatarUrl: '' })
+  })
+
+  it('아바타를 바꾸면 새 URL 을 보낸다', () => {
+    const next = 'https://storage.example/litmood/avatars/1/b.webp'
+    expect(buildProfilePatch(saved, { ...saved, avatarUrl: next })).toEqual({ avatarUrl: next })
+  })
+
+  it('아바타가 그대로면 실어 보내지 않는다', () => {
+    expect(buildProfilePatch(saved, { ...saved, nickname: '새 이름' })).toEqual({
+      nickname: '새 이름',
+    })
+  })
+})

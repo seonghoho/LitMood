@@ -197,8 +197,29 @@ export function ProfileSettingsForm() {
           >
             {uploading ? '올리는 중…' : '사진 변경'}
           </button>
+          {/* 올린 적이 있을 때만 보인다 — 지울 것이 없는데 버튼만 있으면 혼란스럽다 */}
+          {draft.avatarUrl && (
+            <button
+              type="button"
+              onClick={() => update({ avatarUrl: null })}
+              disabled={uploading}
+              className={css({
+                textStyle: 'caption',
+                px: '3',
+                py: '1.5',
+                rounded: 'md',
+                cursor: 'pointer',
+                bg: 'transparent',
+                color: 'fg.muted',
+                alignSelf: 'flex-start',
+                _disabled: { opacity: 0.6, cursor: 'not-allowed' },
+              })}
+            >
+              기본 이미지로
+            </button>
+          )}
           <span className={css({ textStyle: 'caption', color: 'fg.muted' })}>
-            JPG · PNG · WebP, 5MB 이하
+            JPG · PNG · WebP, 5MB 이하 · 저장을 눌러야 반영됩니다
           </span>
           {fieldErrors.avatarUrl && (
             <span className={css({ textStyle: 'caption', color: 'danger.500' })}>
