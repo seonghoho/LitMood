@@ -16,6 +16,7 @@ import com.litmood.interfaces.dto.CollectionDtos.AddCollectionItemRequest;
 import com.litmood.interfaces.dto.CollectionDtos.CollectionResponse;
 import com.litmood.interfaces.dto.CollectionDtos.CreateCollectionRequest;
 import com.litmood.interfaces.dto.CollectionDtos.ReorderItemsRequest;
+import com.litmood.interfaces.dto.CollectionDtos.UpdateCollectionItemRequest;
 import com.litmood.interfaces.dto.CollectionDtos.UpdateCollectionRequest;
 import com.litmood.interfaces.dto.RecordDtos.CreateRecordRequest;
 import com.litmood.support.AuthenticatedTest;
@@ -315,6 +316,140 @@ class CollectionApiTest extends AuthenticatedTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat((List<?>) response.getBody().get("contents")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("담은 이유를 나중에 고칠 수 있다 (F-05-03, 이슈 #7)")
+    void itemNoteCanBeEdited() {
+        AuthResponse me = signupNewUser();
+        String slug = createCollection(me, "노트 목록").slug();
+        String isbn = nextIsbn();
+        stubBook(isbn, "노트 붙일 책");
+        Long contentId = addItem(me, slug, isbn, "처음 담을 때의 메모")
+                .items()
+                .get(0)
+                .content()
+                .id();
+
+        ResponseEntity<CollectionResponse> response = authed(
+                me, HttpMethod.PATCH, "/api/v1/collections/" + slug + "/items/" + contentId,
+                new UpdateCollectionItemRequest("다시 읽고 고친 메모"), CollectionResponse.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().items().get(0).note()).isEqualTo("다시 읽고 고친 메모");
+    }
+
+    @Test
+    @DisplayName("노트를 빈 문자열로 보내면 지워진다 — 기록의 규칙과 같다")
+    void emptyNoteClearsIt() {
+        AuthResponse me = signupNewUser();
+        String slug = createCollection(me, "노트 지우기").slug();
+        String isbn = nextIsbn();
+        stubBook(isbn, "메모 지울 책");
+        Long contentId = addItem(me, slug, isbn, "지워질 메모").items().get(0).content().id();
+
+        CollectionResponse updated = authed(
+                        me, HttpMethod.PATCH, "/api/v1/collections/" + slug + "/items/" + contentId,
+                        new UpdateCollectionItemRequest("   "), CollectionResponse.class)
+                .getBody();
+
+        assertThat(updated.items().get(0).note()).isNull();
+    }
+
+    @Test
+    @DisplayName("담기지 않은 콘텐츠의 노트를 고치려 하면 404")
+    void noteOnMissingItemIsNotFound() {
+        AuthResponse me = signupNewUser();
+        String slug = createCollection(me, "빈 목록").slug();
+
+        assertThat(authedMap(me, HttpMethod.PATCH, "/api/v1/collections/" + slug + "/items/999999",
+                        new UpdateCollectionItemRequest("없는 아이템"))
+                        .getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("남의 컬렉션 노트는 고칠 수 없다")
+    void onlyOwnerCanEditNote() {
+        AuthResponse owner = signupNewUser();
+        AuthResponse stranger = signupNewUser();
+        String slug = createCollection(owner, "남의 목록").slug();
+        String isbn = nextIsbn();
+        stubBook(isbn, "남의 책");
+        Long contentId = addItem(owner, slug, isbn, null).items().get(0).content().id();
+
+        assertThat(authedMap(stranger, HttpMethod.PATCH, "/api/v1/collections/" + slug + "/items/" + contentId,
+                        new UpdateCollectionItemRequest("가로채기"))
+                        .getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    @DisplayName("아이템 노트 경로가 순서 변경 경로를 가리지 않는다")
+    void itemNotePathDoesNotShadowReorder() {
+        AuthResponse me = signupNewUser();
+        String slug = createCollection(me, "순서 유지").slug();
+        String first = nextIsbn();
+        String second = nextIsbn();
+        stubBook(first, "첫째");
+        stubBook(second, "둘째");
+        addItem(me, slug, first, null);
+        CollectionResponse before = addItem(me, slug, second, null);
+        List<Long> reversed = List.of(
+                before.items().get(1).content().id(), before.items().get(0).content().id());
+
+        // /items/{contentId} 를 뒤에 붙였으므로 /items/order 가 여전히 리터럴로 잡혀야 한다
+        CollectionResponse after = authed(
+                        me, HttpMethod.PATCH, "/api/v1/collections/" + slug + "/items/order",
+                        new ReorderItemsRequest(reversed), CollectionResponse.class)
+                .getBody();
+
+        assertThat(after.items()).extracting(i -> i.content().title()).containsExactly("둘째", "첫째");
+    }
+
+    @Test
+    @DisplayName("제목만 고치는 요청이 설명을 지우지 않는다 — 넣지 않은 필드는 그대로다")
+    void partialUpdateKeepsOtherFields() {
+        AuthResponse me = signupNewUser();
+        CollectionResponse created = authed(me, HttpMethod.POST, "/api/v1/collections",
+                        new CreateCollectionRequest("원래 제목", "원래 설명", Visibility.FOLLOWERS),
+                        CollectionResponse.class)
+                .getBody();
+
+        CollectionResponse updated = authed(me, HttpMethod.PATCH, "/api/v1/collections/" + created.slug(),
+                        new UpdateCollectionRequest("고친 제목", null, null, null), CollectionResponse.class)
+                .getBody();
+
+        assertThat(updated.title()).isEqualTo("고친 제목");
+        assertThat(updated.description()).isEqualTo("원래 설명");
+        assertThat(updated.visibility()).isEqualTo(Visibility.FOLLOWERS);
+    }
+
+    @Test
+    @DisplayName("설명은 빈 문자열로 지운다 — 커버도 지우면 다시 첫 아이템을 따라간다")
+    void emptyStringClearsDescriptionAndCover() {
+        AuthResponse me = signupNewUser();
+        CollectionResponse created = authed(me, HttpMethod.POST, "/api/v1/collections",
+                        new CreateCollectionRequest("지우기", "지워질 설명", Visibility.PUBLIC),
+                        CollectionResponse.class)
+                .getBody();
+        String isbn = nextIsbn();
+        stubBook(isbn, "표지 있는 책");
+        addItem(me, created.slug(), isbn, null);
+
+        CollectionResponse pinned = authed(me, HttpMethod.PATCH, "/api/v1/collections/" + created.slug(),
+                        new UpdateCollectionRequest(null, "", "https://cover.example/직접-지정.jpg", null),
+                        CollectionResponse.class)
+                .getBody();
+        assertThat(pinned.description()).isNull();
+        assertThat(pinned.coverUrl()).isEqualTo("https://cover.example/직접-지정.jpg");
+        assertThat(pinned.coverPinned()).isTrue();
+
+        CollectionResponse unpinned = authed(me, HttpMethod.PATCH, "/api/v1/collections/" + created.slug(),
+                        new UpdateCollectionRequest(null, null, "", null), CollectionResponse.class)
+                .getBody();
+        assertThat(unpinned.coverPinned()).isFalse();
+        assertThat(unpinned.coverUrl()).isEqualTo("https://cover.example/" + isbn + ".jpg");
     }
 
     // ── helpers ─────────────────────────────────────────────

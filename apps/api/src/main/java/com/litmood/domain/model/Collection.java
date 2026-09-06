@@ -113,12 +113,23 @@ public class Collection extends BaseTimeEntity {
         return Long.toString(ThreadLocalRandom.current().nextLong(36L * 36 * 36 * 36 * 36 * 36), 36);
     }
 
+    /**
+     * 부분 수정 — <b>넣지 않은 필드(null)는 변경되지 않는다.</b> 지우려면 빈 문자열을 보낸다.
+     *
+     * <p>기록의 규칙과 같다. 예전에는 description·coverUrl 을 그대로 대입해
+     * 제목만 고치는 요청이 설명과 커버를 함께 날렸다.
+     */
     public void edit(String title, String description, String coverUrl, Visibility visibility) {
         if (title != null && !title.isBlank()) {
             this.title = title;
         }
-        this.description = description;
-        this.coverUrl = coverUrl;
+        if (description != null) {
+            this.description = description.isBlank() ? null : description;
+        }
+        if (coverUrl != null) {
+            // 지우면 다시 첫 아이템의 표지를 따라간다 (resolveCoverUrl)
+            this.coverUrl = coverUrl.isBlank() ? null : coverUrl;
+        }
         if (visibility != null) {
             this.visibility = visibility;
         }
@@ -147,6 +158,20 @@ public class Collection extends BaseTimeEntity {
         // 제거 후 position 을 다시 촘촘하게 만든다 — 구멍이 남으면 정렬 변경이 꼬인다
         resequence();
         itemCount = items.size();
+    }
+
+    /**
+     * 담은 이유를 나중에 고친다 (F-05-03).
+     *
+     * <p>빈 문자열이면 지운다 — 기록의 규칙과 같다. 담기지 않은 콘텐츠를 가리키면
+     * 404 다: 없는 아이템의 노트를 조용히 만들어 두면 목록에 나타나지 않는 값이 남는다.
+     */
+    public void changeItemNote(Long contentId, String note) {
+        CollectionItem item = items.stream()
+                .filter(candidate -> candidate.getContent().getId().equals(contentId))
+                .findFirst()
+                .orElseThrow(() -> LitmoodException.notFound("컬렉션 아이템"));
+        item.changeNote(note == null || note.isBlank() ? null : note);
     }
 
     /** 큐레이션에서 순서는 의미다. 전달된 순서대로 position 을 다시 매긴다. */

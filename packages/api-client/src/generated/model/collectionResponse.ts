@@ -17,6 +17,8 @@ export interface CollectionResponse {
   title: string
   description: CollectionResponseDescription
   coverUrl: CollectionResponseCoverUrl
+  /** true 면 커버를 직접 지정한 것이다 */
+  coverPinned: boolean
   visibility: Visibility
   itemCount: number
   ownerHandle: CollectionResponseOwnerHandle

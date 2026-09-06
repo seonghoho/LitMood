@@ -32,6 +32,15 @@ public final class CollectionDtos {
             String coverUrl,
             Visibility visibility) {}
 
+    @Schema(
+            name = "UpdateCollectionItemRequest",
+            description = "담은 이유(노트) 수정. 지우려면 빈 문자열을 보낸다 — 기록의 규칙과 같다.")
+    public record UpdateCollectionItemRequest(
+            @NotNull(message = "노트를 입력해 주세요. 지우려면 빈 문자열을 보냅니다")
+                    @Size(max = 300, message = "노트는 300자를 넘을 수 없습니다")
+                    @Schema(requiredMode = REQUIRED, description = "빈 문자열이면 지운다")
+                    String note) {}
+
     @Schema(name = "AddCollectionItemRequest")
     public record AddCollectionItemRequest(
             @NotNull(message = "콘텐츠 제공자를 지정해 주세요") ProviderType provider,
@@ -85,6 +94,10 @@ public final class CollectionDtos {
             @Schema(requiredMode = REQUIRED) String title,
             @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String description,
             @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String coverUrl,
+            // 편집 화면이 "자동(첫 아이템)"과 "직접 지정"을 구분해 보여줘야 한다.
+            // coverUrl 만으로는 알 수 없다 — 첫 아이템의 표지를 직접 고른 경우와 값이 같다.
+            @Schema(requiredMode = REQUIRED, description = "true 면 커버를 직접 지정한 것이다")
+                    boolean coverPinned,
             @Schema(requiredMode = REQUIRED) Visibility visibility,
             @Schema(requiredMode = REQUIRED) int itemCount,
             @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String ownerHandle,
@@ -107,6 +120,7 @@ public final class CollectionDtos {
                     collection.getTitle(),
                     collection.getDescription(),
                     collection.resolveCoverUrl(),
+                    collection.getCoverUrl() != null && !collection.getCoverUrl().isBlank(),
                     collection.getVisibility(),
                     collection.getItemCount(),
                     ownerHandle,
