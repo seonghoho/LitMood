@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { css } from 'styled-system/css'
-import { flex, stack } from 'styled-system/patterns'
+import { flex, grid, stack } from 'styled-system/patterns'
 import { ApiError } from '@litmood/api-client'
 import { FALLBACK_MOOD_COLOR } from '@litmood/ui'
 import { CONTENT_TYPE_LABEL, CONTENT_TYPES } from '@/features/content/types'
@@ -12,6 +12,7 @@ import { useAuthStore } from '@/shared/store/auth'
 import { DeleteRecordDialog } from './DeleteRecordDialog'
 import { RecordCard } from './RecordCard'
 import { RecordDialog } from './RecordDialog'
+import { RecordGridCard } from './RecordGridCard'
 import {
   buildTimelineQuery,
   EMPTY_TIMELINE_FILTER,
@@ -21,6 +22,8 @@ import {
 } from './timeline-filter'
 import { STATUS_LABEL, type RecordPage, type RecordResponse, type RecordStatus } from './types'
 import { useCuratedMoods } from './use-curated-moods'
+import { readViewMode, writeViewMode, type ViewMode } from './view-mode'
+import { ViewModeToggle } from './ViewModeToggle'
 
 const STATUSES: RecordStatus[] = ['WANT', 'DOING', 'DONE', 'DROPPED']
 
@@ -39,6 +42,18 @@ export function TimelineView() {
   const [filter, setFilter] = useState(EMPTY_TIMELINE_FILTER)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // 서버 렌더링에는 localStorage 가 없다. 리스트로 그린 뒤 저장된 선택으로 교정한다 —
+  // 렌더 중에 읽으면 하이드레이션이 어긋난다.
+  const [viewMode, setViewMode] = useState<ViewMode>('list')
+
+  useEffect(() => {
+    setViewMode(readViewMode())
+  }, [])
+
+  const changeViewMode = (next: ViewMode) => {
+    setViewMode(next)
+    writeViewMode(next)
+  }
   // 수정·삭제 다이얼로그는 목록이 소유한다 — 카드가 들고 있으면 갱신을 위로 올리기 어렵다
   const [editing, setEditing] = useState<RecordResponse | null>(null)
   const [deleting, setDeleting] = useState<RecordResponse | null>(null)
@@ -213,6 +228,9 @@ export function TimelineView() {
 
       <div className={flex({ gap: '3', alignItems: 'center', flexWrap: 'wrap' })}>
         <p className={css({ textStyle: 'caption', color: 'fg.muted' })}>{total}개의 기록</p>
+        <div className={css({ ml: 'auto' })}>
+          <ViewModeToggle mode={viewMode} onChange={changeViewMode} />
+        </div>
         {isFilterActive(filter) && (
           <button
             type="button"
@@ -282,17 +300,38 @@ export function TimelineView() {
         </div>
       )}
 
-      <div className={stack({ gap: '3' })}>
-        {items.map((record) => (
-          <RecordCard
-            key={record.id}
-            record={record}
-            own
-            onEdit={() => setEditing(record)}
-            onDelete={() => setDeleting(record)}
-          />
-        ))}
-      </div>
+      {/* Panda 는 빌드 타임 추출기다 — 클래스를 문자열로 조립하지 말고 두 레이아웃을
+          각각 정적으로 정의해 고른다 */}
+      {viewMode === 'grid' ? (
+        <div
+          className={grid({
+            columns: { base: 2, sm: 3, md: 4 },
+            gap: '4',
+          })}
+        >
+          {items.map((record) => (
+            <RecordGridCard
+              key={record.id}
+              record={record}
+              own
+              onEdit={() => setEditing(record)}
+              onDelete={() => setDeleting(record)}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className={stack({ gap: '3' })}>
+          {items.map((record) => (
+            <RecordCard
+              key={record.id}
+              record={record}
+              own
+              onEdit={() => setEditing(record)}
+              onDelete={() => setDeleting(record)}
+            />
+          ))}
+        </div>
+      )}
 
       {editing && (
         <RecordDialog

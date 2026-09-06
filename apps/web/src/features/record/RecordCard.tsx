@@ -6,6 +6,7 @@ import { FALLBACK_MOOD_COLOR } from '@litmood/ui'
 import { CONTENT_TYPE_LABEL } from '@/features/content/types'
 import { LikeButton } from '@/features/social/LikeButton'
 import { ReportButton } from '@/features/social/ReportButton'
+import { CardAction } from './CardAction'
 import { SpoilerReview } from './SpoilerReview'
 import { STATUS_LABEL, type RecordResponse } from './types'
 
@@ -197,38 +198,5 @@ export function RecordCard({
         </div>
       </div>
     </article>
-  )
-}
-
-function CardAction({
-  onClick,
-  label,
-  danger,
-  children,
-}: {
-  onClick: () => void
-  /** 카드가 여러 개라 "수정" 만으로는 무엇을 수정하는지 알 수 없다 */
-  label: string
-  danger?: boolean
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      className={css({
-        textStyle: 'caption',
-        px: '2',
-        py: '1',
-        rounded: 'sm',
-        cursor: 'pointer',
-        bg: 'transparent',
-        color: danger ? 'danger.500' : 'fg.muted',
-        _hover: { bg: 'bg.subtle' },
-      })}
-    >
-      {children}
-    </button>
   )
 }
