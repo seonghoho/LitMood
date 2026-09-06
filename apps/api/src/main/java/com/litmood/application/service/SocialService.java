@@ -6,6 +6,8 @@ import com.litmood.domain.model.Collection;
 import com.litmood.domain.model.LikeTarget;
 import com.litmood.domain.model.Record;
 import com.litmood.domain.model.Report;
+import com.litmood.domain.model.Report.ReportReason;
+import com.litmood.domain.model.Report.ReportTarget;
 import com.litmood.domain.model.User;
 import com.litmood.domain.repository.CollectionRepository;
 import com.litmood.domain.repository.RecordRepository;
@@ -147,14 +149,42 @@ public class SocialService {
 
     // ── 신고 ────────────────────────────────────────────────
 
+    /**
+     * 신고는 대상 리소스의 주소로 접수한다 — 기록은 id, 컬렉션은 slug, 사용자는 handle.
+     *
+     * <p>신고자는 화면에서 본 것을 신고하는데, 화면이 아는 주소가 그것뿐이다.
+     * 숫자 id 를 요구하면 공개 응답에 내부 id 를 노출해야 한다.
+     */
     @Transactional
-    public void report(
-            Long reporterId,
-            Report.ReportTarget targetType,
-            Long targetId,
-            Report.ReportReason reason,
-            String detail) {
+    public void reportRecord(Long reporterId, Long recordId, ReportReason reason, String detail) {
+        // 볼 수 없는 것은 신고할 수도 없다. 존재를 숨기려 404 로 응답한다.
+        Record record = requireVisibleRecord(reporterId, recordId);
+        if (record.getUserId().equals(reporterId)) {
+            throw new LitmoodException(ErrorCode.VALIDATION_FAILED, "자신의 기록은 신고할 수 없습니다");
+        }
+        save(reporterId, ReportTarget.RECORD, record.getId(), reason, detail);
+    }
 
+    @Transactional
+    public void reportCollection(Long reporterId, String slug, ReportReason reason, String detail) {
+        Collection collection = requireVisibleCollection(reporterId, slug);
+        if (collection.getUserId().equals(reporterId)) {
+            throw new LitmoodException(ErrorCode.VALIDATION_FAILED, "자신의 컬렉션은 신고할 수 없습니다");
+        }
+        save(reporterId, ReportTarget.COLLECTION, collection.getId(), reason, detail);
+    }
+
+    @Transactional
+    public void reportUser(Long reporterId, String handle, ReportReason reason, String detail) {
+        User target = requireUser(handle);
+        if (target.getId().equals(reporterId)) {
+            throw new LitmoodException(ErrorCode.VALIDATION_FAILED, "자기 자신은 신고할 수 없습니다");
+        }
+        save(reporterId, ReportTarget.USER, target.getId(), reason, detail);
+    }
+
+    private void save(
+            Long reporterId, ReportTarget targetType, Long targetId, ReportReason reason, String detail) {
         if (reportRepository.existsBy(reporterId, targetType, targetId)) {
             // 반복 신고로 처리 큐를 채우는 것을 막는다. 사용자에겐 성공으로 보인다.
             return;

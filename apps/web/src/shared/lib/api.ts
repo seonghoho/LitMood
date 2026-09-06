@@ -41,7 +41,13 @@ async function request<T>(
     )
   }
 
-  return response.status === 204 ? (undefined as T) : ((await response.json()) as T)
+  // 본문이 없는 성공 응답이 204 뿐이라고 볼 수 없다 — 신고 접수는 202 에 빈 본문이다.
+  // 있지도 않은 JSON 을 파싱하면 SyntaxError 가 나고, 호출부는 성공한 요청을 실패로 읽는다.
+  const contentType = response.headers.get('content-type')
+  if (response.status === 204 || !contentType?.includes('json')) {
+    return undefined as T
+  }
+  return (await response.json()) as T
 }
 
 /** refresh 쿠키로 액세스 토큰 재발급. 실패하면 로그아웃 상태로 전환한다. */

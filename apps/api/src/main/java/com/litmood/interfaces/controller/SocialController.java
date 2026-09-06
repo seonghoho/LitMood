@@ -97,16 +97,39 @@ public class SocialController {
 
     // ── 신고 ────────────────────────────────────────────────
 
-    @PostMapping("/reports")
-    @Operation(summary = "신고", description = "같은 대상을 반복 신고해도 한 번만 접수된다")
-    public ResponseEntity<Void> report(
-            @CurrentUser AuthPrincipal principal, @Valid @RequestBody ReportRequest request) {
-        socialService.report(
-                principal.userId(),
-                request.targetType(),
-                request.targetId(),
-                request.reason(),
-                request.detail());
+    /*
+     * 신고는 대상 리소스의 주소로 접수한다 (like·follow·block 과 같은 결).
+     * 하나의 /reports 로 받으려면 컬렉션·사용자의 숫자 id 가 필요한데,
+     * 화면이 아는 것은 slug 와 handle 이고 공개 응답에 내부 id 를 노출할 이유는 없다.
+     */
+
+    @PostMapping("/records/{id}/report")
+    @Operation(summary = "기록 신고", description = "같은 대상을 반복 신고해도 한 번만 접수된다")
+    public ResponseEntity<Void> reportRecord(
+            @CurrentUser AuthPrincipal principal,
+            @PathVariable Long id,
+            @Valid @RequestBody ReportRequest request) {
+        socialService.reportRecord(principal.userId(), id, request.reason(), request.detail());
+        return ResponseEntity.accepted().build();
+    }
+
+    @PostMapping("/collections/{slug}/report")
+    @Operation(summary = "컬렉션 신고")
+    public ResponseEntity<Void> reportCollection(
+            @CurrentUser AuthPrincipal principal,
+            @PathVariable String slug,
+            @Valid @RequestBody ReportRequest request) {
+        socialService.reportCollection(principal.userId(), slug, request.reason(), request.detail());
+        return ResponseEntity.accepted().build();
+    }
+
+    @PostMapping("/users/@{handle}/report")
+    @Operation(summary = "사용자 신고")
+    public ResponseEntity<Void> reportUser(
+            @CurrentUser AuthPrincipal principal,
+            @PathVariable String handle,
+            @Valid @RequestBody ReportRequest request) {
+        socialService.reportUser(principal.userId(), handle, request.reason(), request.detail());
         return ResponseEntity.accepted().build();
     }
 }

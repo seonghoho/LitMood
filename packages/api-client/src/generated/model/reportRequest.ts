@@ -6,11 +6,11 @@
  * OpenAPI spec version: v1
  */
 import type { ReportReason } from './reportReason'
-import type { ReportTarget } from './reportTarget'
 
+/**
+ * 신고 대상은 경로가 가리킨다 — 본문에는 사유만 담는다
+ */
 export interface ReportRequest {
-  targetType: ReportTarget
-  targetId: number
   reason: ReportReason
   /**
    * @minLength 0

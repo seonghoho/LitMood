@@ -5,6 +5,7 @@ import { token } from 'styled-system/tokens'
 import { FALLBACK_MOOD_COLOR } from '@litmood/ui'
 import { CONTENT_TYPE_LABEL } from '@/features/content/types'
 import { LikeButton } from '@/features/social/LikeButton'
+import { ReportButton } from '@/features/social/ReportButton'
 import { SpoilerReview } from './SpoilerReview'
 import { STATUS_LABEL, type RecordResponse } from './types'
 
@@ -174,20 +175,25 @@ export function RecordCard({
             </Link>
           )}
 
-          {(onEdit || onDelete) && (
-            <div className={flex({ gap: '2', ml: 'auto' })}>
-              {onEdit && (
-                <CardAction onClick={onEdit} label={`${content.title} 기록 수정`}>
-                  수정
-                </CardAction>
-              )}
-              {onDelete && (
-                <CardAction onClick={onDelete} label={`${content.title} 기록 삭제`} danger>
-                  삭제
-                </CardAction>
-              )}
-            </div>
-          )}
+          <div className={flex({ gap: '2', ml: 'auto' })}>
+            {/* 신고는 남의 기록에만 보인다 — own 은 목록이 이미 판단해 넘겨준다 */}
+            {!own && record.authorHandle && (
+              <ReportButton
+                target={{ kind: 'record', id: record.id, label: content.title }}
+                ownerHandle={record.authorHandle}
+              />
+            )}
+            {onEdit && (
+              <CardAction onClick={onEdit} label={`${content.title} 기록 수정`}>
+                수정
+              </CardAction>
+            )}
+            {onDelete && (
+              <CardAction onClick={onDelete} label={`${content.title} 기록 삭제`} danger>
+                삭제
+              </CardAction>
+            )}
+          </div>
         </div>
       </div>
     </article>

@@ -30,10 +30,8 @@ public final class SocialDtos {
             @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String avatarUrl,
             @Schema(requiredMode = REQUIRED) Instant blockedAt) {}
 
-    @Schema(name = "ReportRequest")
+    @Schema(name = "ReportRequest", description = "신고 대상은 경로가 가리킨다 — 본문에는 사유만 담는다")
     public record ReportRequest(
-            @NotNull(message = "신고 대상을 지정해 주세요") Report.ReportTarget targetType,
-            @NotNull(message = "신고 대상을 지정해 주세요") Long targetId,
             @NotNull(message = "신고 사유를 선택해 주세요") Report.ReportReason reason,
             @Size(max = 500) String detail) {}
 }

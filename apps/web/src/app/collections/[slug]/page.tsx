@@ -7,6 +7,7 @@ import { token } from 'styled-system/tokens'
 import { fetchCollection } from '@/features/collection/server'
 import { CONTENT_TYPE_LABEL } from '@/features/content/types'
 import { CollectionLikeButton } from '@/features/social/CollectionLikeButton'
+import { ReportButton } from '@/features/social/ReportButton'
 
 /**
  * 공개 컬렉션 (F-05-04).
@@ -105,8 +106,12 @@ export default async function CollectionPage({ params }: { params: Promise<{ slu
           {' · '}
           {collection.itemCount}개
         </p>
-        <div>
+        <div className={flex({ gap: '2', alignItems: 'center' })}>
           <CollectionLikeButton slug={collection.slug} initialCount={collection.likeCount} />
+          <ReportButton
+            target={{ kind: 'collection', slug: collection.slug, label: collection.title }}
+            ownerHandle={collection.ownerHandle ?? undefined}
+          />
         </div>
       </header>
 
