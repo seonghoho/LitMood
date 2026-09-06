@@ -3,13 +3,16 @@ package com.litmood.interfaces.controller;
 import com.litmood.application.service.SocialService;
 import com.litmood.infrastructure.security.AuthPrincipal;
 import com.litmood.infrastructure.security.CurrentUser;
+import com.litmood.interfaces.dto.SocialDtos.BlockedUserResponse;
 import com.litmood.interfaces.dto.SocialDtos.LikeResponse;
 import com.litmood.interfaces.dto.SocialDtos.ReportRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -51,6 +54,12 @@ public class SocialController {
     public ResponseEntity<Void> block(@CurrentUser AuthPrincipal principal, @PathVariable String handle) {
         socialService.block(principal.userId(), handle);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/users/me/blocks")
+    @Operation(summary = "내가 차단한 사용자", description = "최근 차단한 순. 여기서만 차단을 되돌릴 수 있다.")
+    public List<BlockedUserResponse> blocks(@CurrentUser AuthPrincipal principal) {
+        return socialService.listBlocked(principal.userId());
     }
 
     @DeleteMapping("/users/@{handle}/block")

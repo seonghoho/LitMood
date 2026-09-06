@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { css } from 'styled-system/css'
-import { stack } from 'styled-system/patterns'
+import { flex, stack } from 'styled-system/patterns'
 import type { CollectionSummary } from '@/features/collection/types'
 import type { RecordPage } from '@/features/record/types'
+import { BlockButton } from '@/features/social/BlockButton'
 import { FollowButton } from '@/features/social/FollowButton'
+import { ProfileCollections } from '@/features/social/ProfileCollections'
 import { ProfileRecords } from '@/features/social/ProfileRecords'
 import { decodeRouteParam } from '@/shared/lib/route-params'
 
@@ -126,43 +127,15 @@ export default async function ProfilePage({ params }: { params: Promise<{ handle
           {' · '}
           팔로잉 <strong className={css({ color: 'fg.default' })}>{profile.following}</strong>
         </p>
-        {/* 팔로우 상태는 조회자마다 다르다. 캐시된 페이지가 아닌 클라이언트가 판단한다. */}
-        <FollowButton handle={profile.handle} />
+        {/* 팔로우·차단 상태는 조회자마다 다르다. 캐시된 페이지가 아닌 클라이언트가 판단한다.
+            stack 안에 그대로 두면 버튼이 가로로 늘어나므로 행으로 묶는다. */}
+        <div className={flex({ gap: '2', alignItems: 'flex-start', flexWrap: 'wrap' })}>
+          <FollowButton handle={profile.handle} />
+          <BlockButton handle={profile.handle} />
+        </div>
       </header>
 
-      {collections.length > 0 && (
-        <section className={stack({ gap: '3' })}>
-          <h2 className={css({ textStyle: 'title' })}>
-            컬렉션 <span className={css({ color: 'fg.muted' })}>{collections.length}</span>
-          </h2>
-          <div className={stack({ gap: '2' })}>
-            {collections.map((collection) => (
-              <Link
-                key={collection.slug}
-                href={`/collections/${collection.slug}`}
-                className={css({
-                  display: 'block',
-                  p: '4',
-                  rounded: 'md',
-                  bg: 'bg.surface',
-                  borderWidth: '1px',
-                  borderStyle: 'solid',
-                  borderColor: 'border.default',
-                })}
-              >
-                <span
-                  className={css({ textStyle: 'body', fontWeight: '600', color: 'fg.default' })}
-                >
-                  {collection.title}
-                </span>
-                <span className={css({ textStyle: 'caption', color: 'fg.muted', ml: '2' })}>
-                  {collection.itemCount}개
-                </span>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+      <ProfileCollections handle={profile.handle} initialCollections={collections} />
 
       <section className={stack({ gap: '3' })}>
         {/*

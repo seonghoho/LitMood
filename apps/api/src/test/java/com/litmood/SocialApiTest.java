@@ -265,6 +265,94 @@ class SocialApiTest extends AuthenticatedTest {
                 .isEqualTo(HttpStatus.FORBIDDEN);
     }
 
+    @Test
+    @DisplayName("blockedByMe 는 단방향이다 — 상대가 나를 차단한 것은 내 버튼 상태가 아니다")
+    void blockedByMeIsOneDirectional() {
+        AuthResponse me = signupNewUser();
+        AuthResponse pest = signupNewUser();
+        authedMap(pest, HttpMethod.POST, "/api/v1/users/@" + me.user().handle() + "/block", null);
+
+        // 상대가 나를 차단했다. 내가 건 차단은 없으므로 내 화면의 버튼은 "차단" 이어야 한다.
+        Map<String, Object> seenByMe = authedMap(
+                        me, HttpMethod.GET, "/api/v1/users/@" + pest.user().handle(), null)
+                .getBody();
+
+        assertThat(seenByMe.get("blockedByMe")).isEqualTo(false);
+    }
+
+    @Test
+    @DisplayName("차단하면 blockedByMe 가 켜지고 해제하면 꺼진다")
+    void blockedByMeTogglesWithBlock() {
+        AuthResponse me = signupNewUser();
+        AuthResponse pest = signupNewUser();
+        String path = "/api/v1/users/@" + pest.user().handle();
+
+        authedMap(me, HttpMethod.POST, path + "/block", null);
+        assertThat(authedMap(me, HttpMethod.GET, path, null).getBody().get("blockedByMe"))
+                .isEqualTo(true);
+
+        authedMap(me, HttpMethod.DELETE, path + "/block", null);
+        assertThat(authedMap(me, HttpMethod.GET, path, null).getBody().get("blockedByMe"))
+                .isEqualTo(false);
+    }
+
+    @Test
+    @DisplayName("비로그인 조회의 blockedByMe 는 언제나 false — 이 응답은 캐시된다")
+    void anonymousProfileNeverBlocked() {
+        AuthResponse me = signupNewUser();
+        AuthResponse pest = signupNewUser();
+        authedMap(me, HttpMethod.POST, "/api/v1/users/@" + pest.user().handle() + "/block", null);
+
+        ResponseEntity<Map<String, Object>> anonymous = rest.exchange(
+                "/api/v1/users/@" + pest.user().handle(),
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<>() {});
+
+        assertThat(anonymous.getBody().get("blockedByMe")).isEqualTo(false);
+    }
+
+    @Test
+    @DisplayName("차단 목록에는 내가 차단한 사람만, 최근 차단한 순으로 나온다")
+    void blockListShowsMyBlocksNewestFirst() {
+        AuthResponse me = signupNewUser();
+        AuthResponse first = signupNewUser();
+        AuthResponse second = signupNewUser();
+        AuthResponse blockedMe = signupNewUser();
+
+        authedMap(me, HttpMethod.POST, "/api/v1/users/@" + first.user().handle() + "/block", null);
+        authedMap(me, HttpMethod.POST, "/api/v1/users/@" + second.user().handle() + "/block", null);
+        // 나를 차단한 사람은 내 차단 목록에 들어가지 않는다
+        authedMap(blockedMe, HttpMethod.POST, "/api/v1/users/@" + me.user().handle() + "/block", null);
+
+        ResponseEntity<List<Map<String, Object>>> blocks = rest.exchange(
+                "/api/v1/users/me/blocks",
+                HttpMethod.GET,
+                new HttpEntity<>(null, bearer(me)),
+                new ParameterizedTypeReference<>() {});
+
+        assertThat(blocks.getBody()).extracting(row -> row.get("handle"))
+                .containsExactly(second.user().handle(), first.user().handle());
+    }
+
+    @Test
+    @DisplayName("차단을 풀면 목록에서 빠진다 — 되돌릴 수 있어야 한다")
+    void unblockRemovesFromList() {
+        AuthResponse me = signupNewUser();
+        AuthResponse pest = signupNewUser();
+        authedMap(me, HttpMethod.POST, "/api/v1/users/@" + pest.user().handle() + "/block", null);
+
+        authedMap(me, HttpMethod.DELETE, "/api/v1/users/@" + pest.user().handle() + "/block", null);
+
+        ResponseEntity<List<Map<String, Object>>> blocks = rest.exchange(
+                "/api/v1/users/me/blocks",
+                HttpMethod.GET,
+                new HttpEntity<>(null, bearer(me)),
+                new ParameterizedTypeReference<>() {});
+
+        assertThat(blocks.getBody()).isEmpty();
+    }
+
     // ── 신고 ────────────────────────────────────────────────
 
     @Test

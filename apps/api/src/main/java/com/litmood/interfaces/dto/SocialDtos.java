@@ -6,6 +6,7 @@ import com.litmood.domain.model.Report;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import java.time.Instant;
 
 public final class SocialDtos {
 
@@ -21,6 +22,13 @@ public final class SocialDtos {
     public record LikeResponse(
             @Schema(requiredMode = REQUIRED) int likeCount,
             @Schema(requiredMode = REQUIRED) boolean likedByMe) {}
+
+    @Schema(name = "BlockedUserResponse", description = "내가 차단한 사용자")
+    public record BlockedUserResponse(
+            @Schema(requiredMode = REQUIRED) String handle,
+            @Schema(requiredMode = REQUIRED) String nickname,
+            @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String avatarUrl,
+            @Schema(requiredMode = REQUIRED) Instant blockedAt) {}
 
     @Schema(name = "ReportRequest")
     public record ReportRequest(

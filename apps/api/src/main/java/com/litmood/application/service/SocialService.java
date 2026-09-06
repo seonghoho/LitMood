@@ -12,6 +12,8 @@ import com.litmood.domain.repository.RecordRepository;
 import com.litmood.domain.repository.ReportRepository;
 import com.litmood.domain.repository.SocialRepository;
 import com.litmood.domain.repository.UserRepository;
+import com.litmood.interfaces.dto.SocialDtos.BlockedUserResponse;
+import java.util.List;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 /** F-06 — 팔로우, 좋아요, 차단, 신고. */
 @Service
 public class SocialService {
+
+    /** 차단 목록은 화면 하나에 담기는 크기면 충분하다. 더 필요해지면 커서 페이징을 붙인다. */
+    private static final int MAX_BLOCK_LIST = 100;
 
     private final SocialRepository socialRepository;
     private final UserRepository userRepository;
@@ -65,7 +70,21 @@ public class SocialService {
         return new FollowStats(
                 socialRepository.countFollowers(target.getId()),
                 socialRepository.countFollowing(target.getId()),
-                socialRepository.isFollowing(viewerId, target.getId()));
+                socialRepository.isFollowing(viewerId, target.getId()),
+                // 가림은 양방향이지만 버튼 상태는 내가 건 차단만 따진다
+                socialRepository.isBlocking(viewerId, target.getId()));
+    }
+
+    /** 내가 차단한 사용자 목록 (F-06-05). 풀 수 있는 곳이 없으면 차단은 되돌릴 수 없는 동작이 된다. */
+    @Transactional(readOnly = true)
+    public List<BlockedUserResponse> listBlocked(Long userId) {
+        return socialRepository.findBlockedUsers(userId, MAX_BLOCK_LIST).stream()
+                .map(blocked -> new BlockedUserResponse(
+                        blocked.user().getHandle(),
+                        blocked.user().getNickname(),
+                        blocked.user().getAvatarUrl(),
+                        blocked.blockedAt()))
+                .toList();
     }
 
     // ── 좋아요 ──────────────────────────────────────────────
@@ -181,5 +200,5 @@ public class SocialService {
         return collection;
     }
 
-    public record FollowStats(long followers, long following, boolean followedByMe) {}
+    public record FollowStats(long followers, long following, boolean followedByMe, boolean blockedByMe) {}
 }

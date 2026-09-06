@@ -16,4 +16,5 @@ export interface PublicProfile {
   followers: number
   following: number
   followedByMe: boolean
+  blockedByMe: boolean
 }

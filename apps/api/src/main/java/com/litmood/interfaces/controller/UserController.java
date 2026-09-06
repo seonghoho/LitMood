@@ -138,7 +138,9 @@ public class UserController {
             @Schema(requiredMode = REQUIRED, types = {"string", "null"}) String avatarUrl,
             @Schema(requiredMode = REQUIRED) long followers,
             @Schema(requiredMode = REQUIRED) long following,
-            @Schema(requiredMode = REQUIRED) boolean followedByMe) {
+            @Schema(requiredMode = REQUIRED) boolean followedByMe,
+            // 내가 이 사용자를 차단했는지. 비로그인·캐시된 서버 렌더링에서는 언제나 false 다
+            @Schema(requiredMode = REQUIRED) boolean blockedByMe) {
 
         static PublicProfile from(User user, SocialService.FollowStats stats) {
             return new PublicProfile(
@@ -148,7 +150,8 @@ public class UserController {
                     user.getAvatarUrl(),
                     stats.followers(),
                     stats.following(),
-                    stats.followedByMe());
+                    stats.followedByMe(),
+                    stats.blockedByMe());
         }
     }
 }
