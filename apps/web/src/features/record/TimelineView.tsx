@@ -5,13 +5,22 @@ import { useCallback, useEffect, useState } from 'react'
 import { css } from 'styled-system/css'
 import { flex, stack } from 'styled-system/patterns'
 import { ApiError } from '@litmood/api-client'
-import { CONTENT_TYPE_LABEL, CONTENT_TYPES, type ContentType } from '@/features/content/types'
+import { FALLBACK_MOOD_COLOR } from '@litmood/ui'
+import { CONTENT_TYPE_LABEL, CONTENT_TYPES } from '@/features/content/types'
 import { apiGet } from '@/shared/lib/api'
 import { useAuthStore } from '@/shared/store/auth'
 import { DeleteRecordDialog } from './DeleteRecordDialog'
 import { RecordCard } from './RecordCard'
 import { RecordDialog } from './RecordDialog'
+import {
+  buildTimelineQuery,
+  EMPTY_TIMELINE_FILTER,
+  isFilterActive,
+  MIN_RATING_OPTIONS,
+  toggleMoodFilter,
+} from './timeline-filter'
 import { STATUS_LABEL, type RecordPage, type RecordResponse, type RecordStatus } from './types'
+import { useCuratedMoods } from './use-curated-moods'
 
 const STATUSES: RecordStatus[] = ['WANT', 'DOING', 'DONE', 'DROPPED']
 
@@ -21,13 +30,13 @@ export function TimelineView() {
   const user = useAuthStore((state) => state.user)
   const ready = useAuthStore((state) => state.ready)
 
+  const moodOptions = useCuratedMoods()
+
   const [items, setItems] = useState<RecordPage['items']>([])
   const [cursor, setCursor] = useState<string | null>(null)
   const [total, setTotal] = useState(0)
-  const [typeFilter, setTypeFilter] = useState<ContentType | null>(null)
-  const [statusFilter, setStatusFilter] = useState<RecordStatus | null>(null)
-  const [from, setFrom] = useState('')
-  const [to, setTo] = useState('')
+  // 필터는 객체 하나로 들고 있는다 — 무엇이 바뀌든 새 객체가 되어 처음부터 다시 읽는다
+  const [filter, setFilter] = useState(EMPTY_TIMELINE_FILTER)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // 수정·삭제 다이얼로그는 목록이 소유한다 — 카드가 들고 있으면 갱신을 위로 올리기 어렵다
@@ -39,15 +48,8 @@ export function TimelineView() {
       setLoading(true)
       setError(null)
       try {
-        const params = new URLSearchParams()
-        if (typeFilter) params.set('types', typeFilter)
-        if (statusFilter) params.set('status', statusFilter)
-        // 서버는 기록의 시작·종료일로 거른다 (F-03-06 으로 입력이 생겼다)
-        if (from) params.set('from', from)
-        if (to) params.set('to', to)
-        if (nextCursor) params.set('cursor', nextCursor)
-
-        const page = await apiGet<RecordPage>(`/api/v1/records/me?${params.toString()}`)
+        const query = buildTimelineQuery(filter, nextCursor)
+        const page = await apiGet<RecordPage>(`/api/v1/records/me${query ? `?${query}` : ''}`)
         setItems((prev) => (append ? [...prev, ...page.items] : page.items))
         setCursor(page.nextCursor)
         setTotal(page.totalCount)
@@ -57,7 +59,7 @@ export function TimelineView() {
         setLoading(false)
       }
     },
-    [typeFilter, statusFilter, from, to],
+    [filter],
   )
 
   // 필터가 바뀌면 커서를 버리고 처음부터 다시 읽는다
@@ -99,14 +101,17 @@ export function TimelineView() {
     <div className={stack({ gap: '5' })}>
       <div className={stack({ gap: '2' })}>
         <div className={flex({ gap: '1.5', flexWrap: 'wrap' })}>
-          <FilterChip selected={typeFilter === null} onClick={() => setTypeFilter(null)}>
+          <FilterChip
+            selected={filter.type === null}
+            onClick={() => setFilter((f) => ({ ...f, type: null }))}
+          >
             전체
           </FilterChip>
           {CONTENT_TYPES.map((type) => (
             <FilterChip
               key={type}
-              selected={typeFilter === type}
-              onClick={() => setTypeFilter(typeFilter === type ? null : type)}
+              selected={filter.type === type}
+              onClick={() => setFilter((f) => ({ ...f, type: f.type === type ? null : type }))}
             >
               {CONTENT_TYPE_LABEL[type]}
             </FilterChip>
@@ -116,8 +121,10 @@ export function TimelineView() {
           {STATUSES.map((status) => (
             <FilterChip
               key={status}
-              selected={statusFilter === status}
-              onClick={() => setStatusFilter(statusFilter === status ? null : status)}
+              selected={filter.status === status}
+              onClick={() =>
+                setFilter((f) => ({ ...f, status: f.status === status ? null : status }))
+              }
             >
               {STATUS_LABEL[status]}
             </FilterChip>
@@ -125,47 +132,103 @@ export function TimelineView() {
         </div>
       </div>
 
+      {/* 무드는 이 서비스의 1급 개념이다 — 남의 무드는 /moods 로 탐색되는데
+          정작 내 기록을 무드로 거를 수 없었다 (F-04-02) */}
+      {moodOptions.length > 0 && (
+        <div className={flex({ gap: '1.5', flexWrap: 'wrap' })}>
+          {moodOptions.map((mood) => {
+            const selected = filter.moods.includes(mood.name)
+            return (
+              <button
+                key={mood.name}
+                type="button"
+                // 서버가 대조하는 것은 정규화된 name 이다 — displayName 을 보내면 조용히 0건이 된다
+                onClick={() => setFilter((f) => toggleMoodFilter(f, mood.name))}
+                aria-pressed={selected}
+                style={
+                  selected
+                    ? { backgroundColor: mood.color ?? FALLBACK_MOOD_COLOR, color: '#fff' }
+                    : { borderColor: mood.color ?? FALLBACK_MOOD_COLOR }
+                }
+                className={moodChipStyle}
+              >
+                {mood.displayName}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
       <div className={flex({ gap: '2', alignItems: 'center', flexWrap: 'wrap' })}>
-        <span className={css({ textStyle: 'caption', color: 'fg.muted' })}>기간</span>
+        <label className={flex({ gap: '2', alignItems: 'center' })}>
+          <span className={css({ textStyle: 'caption', color: 'fg.muted' })}>별점</span>
+          <select
+            value={filter.minRating ?? ''}
+            onChange={(event) =>
+              setFilter((f) => ({
+                ...f,
+                minRating: event.target.value === '' ? null : Number(event.target.value),
+              }))
+            }
+            className={filterControlStyle}
+          >
+            <option value="">전체</option>
+            {MIN_RATING_OPTIONS.map((value) => (
+              <option key={value} value={value}>
+                {value.toFixed(1)} 이상
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {/* 서버는 created_at 으로 거른다 — "본 날"이 아니라 "기록한 날"이다.
+            기준을 바꾸는 것은 별도 이슈로 뒀다 (#22 의 열린 질문) */}
+        <span className={css({ textStyle: 'caption', color: 'fg.muted' })}>기록한 날</span>
         <input
           type="date"
-          value={from}
-          max={to || undefined}
-          onChange={(event) => setFrom(event.target.value)}
-          aria-label="시작일부터"
-          className={filterDateStyle}
+          value={filter.from}
+          max={filter.to || undefined}
+          onChange={(event) => setFilter((f) => ({ ...f, from: event.target.value }))}
+          aria-label="기록한 날 — 시작"
+          className={filterControlStyle}
         />
         <span className={css({ textStyle: 'caption', color: 'fg.muted' })}>—</span>
         <input
           type="date"
-          value={to}
-          min={from || undefined}
-          onChange={(event) => setTo(event.target.value)}
-          aria-label="종료일까지"
-          className={filterDateStyle}
+          value={filter.to}
+          min={filter.from || undefined}
+          onChange={(event) => setFilter((f) => ({ ...f, to: event.target.value }))}
+          aria-label="기록한 날 — 끝"
+          className={filterControlStyle}
         />
-        {(from || to) && (
+      </div>
+
+      {/* 별점은 선택 사항이다 (F-03-03). 이 서비스에서는 무드만 남긴 기록이 흔하므로
+          "3.5 이상"을 고르면 그것들이 통째로 빠진다는 사실을 감추지 않는다 */}
+      {filter.minRating !== null && (
+        <p className={css({ textStyle: 'caption', color: 'fg.muted' })}>
+          별점을 남기지 않은 기록은 제외됩니다.
+        </p>
+      )}
+
+      <div className={flex({ gap: '3', alignItems: 'center', flexWrap: 'wrap' })}>
+        <p className={css({ textStyle: 'caption', color: 'fg.muted' })}>{total}개의 기록</p>
+        {isFilterActive(filter) && (
           <button
             type="button"
-            onClick={() => {
-              setFrom('')
-              setTo('')
-            }}
+            onClick={() => setFilter(EMPTY_TIMELINE_FILTER)}
             className={css({
               textStyle: 'caption',
               color: 'fg.muted',
               cursor: 'pointer',
               bg: 'transparent',
-              px: '2',
-              py: '1',
+              textDecoration: 'underline',
             })}
           >
-            기간 지우기
+            필터 초기화
           </button>
         )}
       </div>
-
-      <p className={css({ textStyle: 'caption', color: 'fg.muted' })}>{total}개의 기록</p>
 
       {error && (
         <p role="alert" className={css({ textStyle: 'body', color: 'danger.500' })}>
@@ -175,21 +238,47 @@ export function TimelineView() {
 
       {!loading && items.length === 0 && (
         <div className={stack({ gap: '3', alignItems: 'flex-start', py: '8' })}>
-          <p className={css({ textStyle: 'body', color: 'fg.muted' })}>아직 기록이 없습니다.</p>
-          <Link
-            href="/search"
-            className={css({
-              textStyle: 'body',
-              fontWeight: '600',
-              px: '4',
-              py: '2',
-              rounded: 'md',
-              bg: 'brand.default',
-              color: 'fg.onAccent',
-            })}
-          >
-            첫 기록 남기기
-          </Link>
+          {/* 필터 때문에 빈 것을 "기록이 없다"고 말하면 사용자는 기록이 사라진 줄 안다 */}
+          {isFilterActive(filter) ? (
+            <>
+              <p className={css({ textStyle: 'body', color: 'fg.muted' })}>
+                조건에 맞는 기록이 없습니다.
+              </p>
+              <button
+                type="button"
+                onClick={() => setFilter(EMPTY_TIMELINE_FILTER)}
+                className={css({
+                  textStyle: 'body',
+                  px: '4',
+                  py: '2',
+                  rounded: 'md',
+                  cursor: 'pointer',
+                  bg: 'bg.subtle',
+                  color: 'fg.default',
+                })}
+              >
+                필터 초기화
+              </button>
+            </>
+          ) : (
+            <>
+              <p className={css({ textStyle: 'body', color: 'fg.muted' })}>아직 기록이 없습니다.</p>
+              <Link
+                href="/search"
+                className={css({
+                  textStyle: 'body',
+                  fontWeight: '600',
+                  px: '4',
+                  py: '2',
+                  rounded: 'md',
+                  bg: 'brand.default',
+                  color: 'fg.onAccent',
+                })}
+              >
+                첫 기록 남기기
+              </Link>
+            </>
+          )}
         </div>
       )}
 
@@ -282,7 +371,7 @@ function FilterChip({
   )
 }
 
-const filterDateStyle = css({
+const filterControlStyle = css({
   px: '2',
   py: '1',
   rounded: 'md',
@@ -292,4 +381,16 @@ const filterDateStyle = css({
   borderWidth: '1px',
   borderStyle: 'solid',
   borderColor: 'border.default',
+})
+
+const moodChipStyle = css({
+  textStyle: 'caption',
+  px: '3',
+  py: '1.5',
+  rounded: 'full',
+  cursor: 'pointer',
+  borderWidth: '1px',
+  borderStyle: 'solid',
+  bg: 'bg.surface',
+  color: 'fg.default',
 })

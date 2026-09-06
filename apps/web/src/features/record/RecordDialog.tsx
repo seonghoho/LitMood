@@ -6,17 +6,17 @@ import { flex, stack } from 'styled-system/patterns'
 import { ApiError } from '@litmood/api-client'
 import { FALLBACK_MOOD_COLOR } from '@litmood/ui'
 import type { ContentSummary } from '@/features/content/types'
-import { apiGet, apiPatch, apiPost } from '@/shared/lib/api'
+import { apiPatch, apiPost } from '@/shared/lib/api'
 import { buildRecordPatch } from './record-edit'
 import {
   allowsRating,
   STATUS_LABEL,
   VISIBILITY_LABEL,
-  type MoodTag,
   type RecordResponse,
   type RecordStatus,
   type Visibility,
 } from './types'
+import { useCuratedMoods } from './use-curated-moods'
 
 const STATUSES: RecordStatus[] = ['WANT', 'DOING', 'DONE', 'DROPPED']
 const VISIBILITIES: Visibility[] = ['PUBLIC', 'FOLLOWERS', 'PRIVATE']
@@ -66,17 +66,13 @@ export function RecordDialog({
   const [showDetails, setShowDetails] = useState(
     Boolean(record?.contextNote || record?.startedAt || record?.finishedAt || record?.repeatCount),
   )
-  const [curated, setCurated] = useState<MoodTag[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const dialogRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    apiGet<MoodTag[]>('/api/v1/moods?limit=12')
-      .then(setCurated)
-      .catch(() => setCurated([]))
-  }, [])
+  // 타임라인 필터와 같은 목록을 쓴다 (#22)
+  const curated = useCuratedMoods()
 
   // Esc 로 닫기 + 열려 있는 동안 배경 스크롤 차단
   useEffect(() => {
