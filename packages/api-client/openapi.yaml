@@ -522,6 +522,22 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/CollectionResponse"
+  /api/v1/users/me/blocks:
+    get:
+      tags:
+      - Social
+      summary: 내가 차단한 사용자
+      description: 최근 차단한 순. 여기서만 차단을 되돌릴 수 있다.
+      operationId: blocks
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BlockedUserResponse"
   /api/v1/users/@{handle}:
     get:
       tags:
@@ -1430,6 +1446,26 @@ components:
             format: int64
       required:
       - contentIds
+    BlockedUserResponse:
+      type: object
+      description: 내가 차단한 사용자
+      properties:
+        handle:
+          type: string
+        nickname:
+          type: string
+        avatarUrl:
+          type:
+          - string
+          - "null"
+        blockedAt:
+          type: string
+          format: date-time
+      required:
+      - avatarUrl
+      - blockedAt
+      - handle
+      - nickname
     PublicProfile:
       type: object
       properties:
@@ -1453,9 +1489,12 @@ components:
           format: int64
         followedByMe:
           type: boolean
+        blockedByMe:
+          type: boolean
       required:
       - avatarUrl
       - bio
+      - blockedByMe
       - followedByMe
       - followers
       - following

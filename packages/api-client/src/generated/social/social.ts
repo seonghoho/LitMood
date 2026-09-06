@@ -6,7 +6,7 @@
  * OpenAPI spec version: v1
  */
 import { apiFetcher } from '../../fetcher'
-import type { LikeResponse, ReportRequest } from '.././model'
+import type { BlockedUserResponse, LikeResponse, ReportRequest } from '.././model'
 
 /**
  * 비대칭 관계 — 승인이 필요 없다. 이미 팔로우 중이면 멱등하게 성공한다.
@@ -244,5 +244,30 @@ export const unlikeCollection = async (
   return apiFetcher<unlikeCollectionResponse>(getUnlikeCollectionUrl(slug), {
     ...options,
     method: 'DELETE',
+  })
+}
+
+/**
+ * 최근 차단한 순. 여기서만 차단을 되돌릴 수 있다.
+ * @summary 내가 차단한 사용자
+ */
+export type blocksResponse200 = {
+  data: BlockedUserResponse[]
+  status: 200
+}
+
+export type blocksResponseSuccess = blocksResponse200 & {
+  headers: Headers
+}
+export type blocksResponse = blocksResponseSuccess
+
+export const getBlocksUrl = () => {
+  return `/api/v1/users/me/blocks`
+}
+
+export const blocks = async (options?: RequestInit): Promise<blocksResponse> => {
+  return apiFetcher<blocksResponse>(getBlocksUrl(), {
+    ...options,
+    method: 'GET',
   })
 }

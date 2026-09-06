@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { css } from 'styled-system/css'
 import { stack } from 'styled-system/patterns'
+import { ApiError } from '@litmood/api-client'
 import { RecordCard } from '@/features/record/RecordCard'
 import type { RecordPage, RecordResponse } from '@/features/record/types'
 import { apiGet } from '@/shared/lib/api'
@@ -17,6 +18,10 @@ import { useAuthStore } from '@/shared/store/auth'
  *
  * 이렇게 나눈 이유: 프로필 페이지는 검색 유입 경로라 캐시된 서버 렌더링이
  * 필요한데(NFR-06), 캐시된 응답에 조회자별 내용을 담을 수는 없다.
+ *
+ * 재조회는 목록을 <b>덧붙이기만</b> 하는 것이 아니라 <b>비우기도</b> 한다.
+ * 차단 관계면 서버가 404 로 응답하는데, 그때 서버가 그려 둔 공개 목록을 그대로
+ * 두면 차단하고도 상대 기록이 계속 보인다 (이슈 #17).
  */
 export function ProfileRecords({
   handle,
@@ -31,6 +36,7 @@ export function ProfileRecords({
   const ready = useAuthStore((state) => state.ready)
   const [records, setRecords] = useState(initialRecords)
   const [total, setTotal] = useState(initialTotal)
+  const [blocked, setBlocked] = useState(false)
 
   useEffect(() => {
     if (!ready || !user) return
@@ -40,7 +46,17 @@ export function ProfileRecords({
         setRecords(page.items)
         setTotal(page.totalCount)
       })
-      .catch(() => undefined) // 실패하면 서버가 그린 공개 목록을 유지한다
+      .catch((error: unknown) => {
+        // 페이지가 이미 그려진 이상 사용자는 존재한다. 여기서의 404 는 차단 관계라는 뜻이다
+        // (서버는 존재를 숨기려 403 대신 404 로 응답한다).
+        if (error instanceof ApiError && error.problem.status === 404) {
+          setBlocked(true)
+          setRecords([])
+          setTotal(0)
+          return
+        }
+        // 그 밖의 실패는 서버가 그린 공개 목록을 유지한다
+      })
   }, [ready, user, handle])
 
   return (
@@ -52,7 +68,11 @@ export function ProfileRecords({
         기록 <span className={css({ color: 'fg.muted' })}>{total}</span>
       </h2>
 
-      {records.length === 0 ? (
+      {blocked ? (
+        <p className={css({ textStyle: 'body', color: 'fg.muted' })}>
+          차단한 사용자입니다. 설정에서 차단을 해제하면 다시 보입니다.
+        </p>
+      ) : records.length === 0 ? (
         <p className={css({ textStyle: 'body', color: 'fg.muted' })}>
           아직 공개된 기록이 없습니다.
         </p>

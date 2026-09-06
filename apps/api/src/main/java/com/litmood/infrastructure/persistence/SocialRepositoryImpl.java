@@ -4,7 +4,9 @@ import com.litmood.domain.model.Block;
 import com.litmood.domain.model.Follow;
 import com.litmood.domain.model.Like;
 import com.litmood.domain.model.LikeTarget;
+import com.litmood.domain.model.User;
 import com.litmood.domain.repository.SocialRepository;
+import java.time.Instant;
 import jakarta.persistence.EntityManager;
 import java.util.HashSet;
 import java.util.List;
@@ -120,6 +122,44 @@ class SocialRepositoryImpl implements SocialRepository {
         Set<Long> hidden = new HashSet<>(blocked);
         hidden.addAll(blockers);
         return hidden;
+    }
+
+    @Override
+    public boolean isBlocking(Long blockerId, Long blockedId) {
+        if (blockerId == null || blockedId == null) {
+            return false;
+        }
+        return em.createQuery(
+                        "SELECT count(b) FROM Block b WHERE b.id.blockerId = :a AND b.id.blockedId = :b",
+                        Long.class)
+                .setParameter("a", blockerId)
+                .setParameter("b", blockedId)
+                .getSingleResult()
+                > 0;
+    }
+
+    @Override
+    public List<BlockedUser> findBlockedUsers(Long blockerId, int limit) {
+        if (blockerId == null) {
+            return List.of();
+        }
+        // 사용자를 한 번에 조인해 온다 — id 만 받아 와 하나씩 조회하면 N+1 이 된다.
+        // 탈퇴한 사용자는 목록에서 뺀다(차단 관계 자체는 남겨 둔다 — 되살아나면 곤란하다).
+        return em
+                .createQuery(
+                        """
+                        SELECT u, b.createdAt FROM Block b
+                        JOIN User u ON u.id = b.id.blockedId
+                        WHERE b.id.blockerId = :blocker AND u.deletedAt IS NULL
+                        ORDER BY b.createdAt DESC
+                        """,
+                        Object[].class)
+                .setParameter("blocker", blockerId)
+                .setMaxResults(limit)
+                .getResultList()
+                .stream()
+                .map(row -> new BlockedUser((User) row[0], (Instant) row[1]))
+                .toList();
     }
 
     @Override
