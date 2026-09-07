@@ -130,26 +130,22 @@ base 브랜치에 `openapi.yaml` 이 없으면 실패합니다 — `continue-on-
 
 ## M5-6. 운영 최소 요건
 
-- [ ] 신고 처리 화면 + 관리자 권한 — [#28](https://github.com/seonghoho/LitMood/issues/28)
-      신고를 **접수하는** 길은 [#18](https://github.com/seonghoho/LitMood/issues/18) 에서 만들었지만
-      쌓인 것을 **볼 방법이 없습니다**. 현재 모든 사용자가 동일 권한(`ROLE_USER`)이라
-      관리자를 어떻게 임명할지부터 정해야 합니다
+- [x] 신고 처리 화면 + 관리자 권한 — [#28](https://github.com/seonghoho/LitMood/issues/28)
+      운영자는 `/admin/reports` 에서 큐를 보고 `조치함` / `기각` 으로 상태를 옮깁니다.
+      **운영자는 환경변수 `ADMIN_HANDLES`** 의 핸들 목록입니다 (쉼표 구분, 대소문자 구분).
+      `users` 에 권한 컬럼을 두지 않아 DB 직접 수정 없이 배포로 바뀝니다 — 대신 부여·회수에
+      재배포가 필요하고, 회수는 access 토큰이 만료된 뒤(15분) 적용됩니다.
 
-  > **그때까지의 운영 절차.** 화면이 생기기 전에는 DB 를 직접 봅니다.
-  >
-  > ```bash
-  > docker exec -it litmood-postgres psql -U litmood -d litmood -c "
-  >   SELECT r.id, r.target_type, r.target_id, r.reason, r.detail, r.created_at
-  >   FROM reports r WHERE r.status = 'PENDING' ORDER BY r.created_at;"
-  > ```
-  >
-  > 대상은 `target_type` 에 따라 `records.id` / `collections.id` / `users.id` 입니다.
-  > 처리했으면 상태를 옮깁니다 — 같은 사람이 같은 대상을 다시 신고해도 접수되지 않으므로,
-  > `PENDING` 으로 두면 큐가 계속 쌓인 것처럼 보입니다.
-  >
-  > ```sql
-  > UPDATE reports SET status = 'REVIEWED', resolved_at = now() WHERE id = :id;
-  > ```
+  > **적어 둔 핸들에 해당하는 계정이 없으면 기동 로그에 경고가 남습니다.** 핸들은 가입
+  > 순서로 임자가 정해지므로, 오타를 방치하면 그 이름으로 먼저 가입하는 사람이 운영자가
+  > 됩니다. 배포 후 로그를 한 번 확인하세요.
+
+  > **처리 결과에 따른 조치(기록 숨김·계정 정지)는 아직 없습니다.** 정지는 상태·해제 경로·
+  > 이의 절차가 따라오는 별개의 기능입니다. 지금은 큐에서 대상으로 이동해 손으로 확인하고,
+  > 상태만 옮깁니다.
+
+  > **접수량은 `litmood.reports.received` 카운터로 나갑니다** (`target`, `reason` 태그).
+  > 큐를 열어보기 전에 급증을 알아채라고 둔 것입니다 (M5-4).
 
 - [ ] Rate limit — `docs/05-api-spec.md` 에 정책만 있고 **구현이 없습니다**
       (인증 600/min, 비인증 60/min, 검색 30/min — Redis 토큰 버킷)

@@ -89,6 +89,10 @@ litmood:
     secret-key: ${S3_SECRET_KEY:litmood_local}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+  admin:
+    # 운영자 핸들 목록 (#28). 쉼표로 구분하며, 비워 두면 운영 화면에 들어갈 수 있는
+    # 계정이 없다. 여기 적는 핸들은 이미 존재하는 계정이어야 한다 — 기동 시 경고한다.
+    handles: ${ADMIN_HANDLES:}
 
 # NFR-07 — 관측성
 management:

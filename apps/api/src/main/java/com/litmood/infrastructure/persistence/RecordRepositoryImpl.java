@@ -77,6 +77,12 @@ class RecordRepositoryImpl implements RecordRepository {
     }
 
     @Override
+    public List<Record> findAllByIds(List<Long> ids) {
+        // IN () 은 SQL 문법 오류다. 빈 목록은 질의 없이 끝낸다.
+        return ids.isEmpty() ? List.of() : jpa.findAllWithDetails(ids);
+    }
+
+    @Override
     public List<Record> findTimeline(RecordQuery query) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<Long> criteria = cb.createQuery(Long.class);

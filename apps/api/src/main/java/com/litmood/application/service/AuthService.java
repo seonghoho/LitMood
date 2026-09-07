@@ -4,6 +4,7 @@ import com.litmood.domain.exception.ErrorCode;
 import com.litmood.domain.exception.LitmoodException;
 import com.litmood.domain.model.User;
 import com.litmood.domain.repository.UserRepository;
+import com.litmood.infrastructure.security.AdminHandles;
 import com.litmood.infrastructure.security.JwtTokenProvider;
 import com.litmood.infrastructure.security.RefreshTokenStore;
 import com.litmood.interfaces.dto.AuthDtos.AuthResponse;
@@ -27,16 +28,19 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
     private final RefreshTokenStore refreshTokenStore;
+    private final AdminHandles adminHandles;
 
     public AuthService(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             JwtTokenProvider tokenProvider,
-            RefreshTokenStore refreshTokenStore) {
+            RefreshTokenStore refreshTokenStore,
+            AdminHandles adminHandles) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.tokenProvider = tokenProvider;
         this.refreshTokenStore = refreshTokenStore;
+        this.adminHandles = adminHandles;
     }
 
     @Transactional
@@ -109,7 +113,10 @@ public class AuthService {
         refreshTokenStore.store(user.getId(), refresh.jti(), refresh.ttl());
 
         return new Issued(
-                new AuthResponse(accessToken, tokenProvider.accessTtlSeconds(), UserSummary.from(user)),
+                new AuthResponse(
+                        accessToken,
+                        tokenProvider.accessTtlSeconds(),
+                        UserSummary.from(user, adminHandles.isAdmin(user.getHandle()))),
                 refresh.value(),
                 refresh.ttl().toSeconds());
     }

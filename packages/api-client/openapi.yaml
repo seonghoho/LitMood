@@ -13,6 +13,8 @@ tags:
   description: 기록
 - name: Discover
   description: 탐색
+- name: Admin
+  description: 운영 — 신고 처리
 - name: Auth
   description: 인증
 - name: Moods
@@ -628,6 +630,33 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/CollectionResponse"
+  /api/v1/admin/reports/{id}:
+    patch:
+      tags:
+      - Admin
+      summary: 신고 처리
+      description: PENDING 인 신고만 처리할 수 있다. 이미 처리된 건은 409 다.
+      operationId: resolve
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportResolutionRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdminReportResponse"
   /api/v1/users/me/blocks:
     get:
       tags:
@@ -994,6 +1023,38 @@ paths:
               schema:
                 $ref: "#/components/schemas/SearchResponse"
       security: []
+  /api/v1/admin/reports:
+    get:
+      tags:
+      - Admin
+      summary: 신고 큐
+      description: "최근 접수 순으로 돌려준다. status 를 비우면 상태를 가리지 않는다. 각 항목에는 대상의 이름과, 같은 대\
+        상에 쌓인 신고 건수가 함께 실린다."
+      operationId: reports
+      parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          $ref: "#/components/schemas/ReportStatus"
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdminReportPage"
 components:
   schemas:
     AvatarUploadRequest:
@@ -1412,7 +1473,11 @@ components:
           type:
           - string
           - "null"
+        admin:
+          type: boolean
+          description: 운영자 여부 (#28). 운영 화면 진입 여부를 화면이 판단하는 근거다
       required:
+      - admin
       - avatarUrl
       - handle
       - id
@@ -1558,6 +1623,107 @@ components:
             format: int64
       required:
       - contentIds
+    ReportResolutionRequest:
+      type: object
+      description: 신고 처리 결과. PENDING 으로는 되돌릴 수 없다
+      properties:
+        status:
+          $ref: "#/components/schemas/ReportStatus"
+      required:
+      - status
+    ReportStatus:
+      type: string
+      enum:
+      - PENDING
+      - REVIEWED
+      - DISMISSED
+    AdminReportResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        reason:
+          $ref: "#/components/schemas/ReportReason"
+        detail:
+          type:
+          - string
+          - "null"
+        status:
+          $ref: "#/components/schemas/ReportStatus"
+        target:
+          $ref: "#/components/schemas/AdminReportTarget"
+        reporterHandle:
+          type:
+          - string
+          - "null"
+          description: 신고자 핸들. 탈퇴했으면 null
+        reporterNickname:
+          type:
+          - string
+          - "null"
+        sameTargetCount:
+          type: integer
+          format: int64
+          description: 같은 대상에 쌓인 신고 건수(상태 무관). 여러 사람이 같은 것을 신고했다는 신호다
+        createdAt:
+          type: string
+          format: date-time
+        resolvedAt:
+          type:
+          - string
+          - "null"
+          format: date-time
+      required:
+      - createdAt
+      - detail
+      - id
+      - reason
+      - reporterHandle
+      - reporterNickname
+      - resolvedAt
+      - sameTargetCount
+      - status
+      - target
+    AdminReportTarget:
+      type: object
+      properties:
+        type:
+          $ref: "#/components/schemas/ReportTarget"
+        id:
+          type: integer
+          format: int64
+        label:
+          type:
+          - string
+          - "null"
+          description: "기록은 콘텐츠 제목, 컬렉션은 제목, 사용자는 닉네임. 삭제된 대상이면 null"
+        handle:
+          type:
+          - string
+          - "null"
+          description: 대상 본인 또는 대상을 만든 사람의 핸들. 프로필로 이동하는 데 쓴다
+        slug:
+          type:
+          - string
+          - "null"
+          description: 컬렉션일 때만 채워진다
+        deleted:
+          type: boolean
+          description: 이미 지워진 대상이면 true — 조치할 것이 남아 있지 않다
+      required:
+      - deleted
+      - handle
+      - id
+      - label
+      - slug
+      - type
+    ReportTarget:
+      type: string
+      enum:
+      - RECORD
+      - COLLECTION
+      - USER
     BlockedUserResponse:
       type: object
       description: 내가 차단한 사용자
@@ -1770,6 +1936,31 @@ components:
       - cached
       - failedProviders
       - results
+    AdminReportPage:
+      type: object
+      description: 커서 기반 페이지. nextCursor 가 null 이면 마지막 페이지다.
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminReportResponse"
+        nextCursor:
+          type:
+          - string
+          - "null"
+        totalCount:
+          type: integer
+          format: int64
+          description: 필터에 걸린 전체 건수
+        pendingCount:
+          type: integer
+          format: int64
+          description: 아직 처리하지 않은 신고 수. 필터와 무관하게 큐의 크기를 알려준다
+      required:
+      - items
+      - nextCursor
+      - pendingCount
+      - totalCount
   securitySchemes:
     bearerAuth:
       type: http

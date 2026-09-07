@@ -64,6 +64,12 @@ class CollectionRepositoryImpl implements CollectionRepository {
     }
 
     @Override
+    public List<Collection> findAllByIds(List<Long> ids) {
+        // IN () 은 SQL 문법 오류다. 빈 목록은 질의 없이 끝낸다.
+        return ids.isEmpty() ? List.of() : jpa.findAllById(ids);
+    }
+
+    @Override
     public boolean existsBySlug(String slug) {
         return jpa.existsBySlug(slug);
     }

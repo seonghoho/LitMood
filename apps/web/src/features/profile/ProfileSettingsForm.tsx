@@ -149,9 +149,12 @@ export function ProfileSettingsForm() {
       setDraft(next)
       setDone(true)
 
-      // 헤더의 닉네임·아바타가 즉시 따라오게 한다
-      if (accessToken) {
+      // 헤더의 닉네임·아바타가 즉시 따라오게 한다.
+      //   현재 사용자에 덮어쓴다 — 프로필 수정이 건드리지 않는 필드(운영자 여부 등)를
+      //   여기서 새로 만들면 조용히 지워진다.
+      if (accessToken && storeUser) {
         signIn(accessToken, {
+          ...storeUser,
           id: updated.id,
           handle: updated.handle,
           nickname: updated.nickname,
